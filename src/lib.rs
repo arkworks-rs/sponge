@@ -19,14 +19,14 @@
 
 use ark_ff::Field;
 
-/// An enum for specifying the challenge size.
-pub enum ChallengeSize {
-    /// Sample challenges from the entire field.
+/// An enum for specifying the output size.
+pub enum OutputSize {
+    /// Sample outputs from the entire field.
     Full,
 
-    /// Sample challenges from a subset of the field.
+    /// Sample outputs from a subset of the field.
     Truncated {
-        /// The maximum size of the subset is 2^num_bytes.
+        /// The maximum size of the subset is 2^num_bits.
         num_bits: usize,
     },
 }
@@ -55,10 +55,10 @@ pub trait FiatShamirSponge<F: Field> {
     /// Output a field element from the entire field.
     /// Depends on previous `absorb` and `squeeze` calls.
     fn squeeze(&mut self) -> F {
-        self.squeeze_with_size(ChallengeSize::Full)
+        self.squeeze_with_size(OutputSize::Full)
     }
 
     /// Output a field element from a subset of the field.
     /// Depends on previous `absorb` and `squeeze` calls.
-    fn squeeze_with_size(&mut self, size: ChallengeSize) -> F;
+    fn squeeze_with_size(&mut self, size: OutputSize) -> F;
 }
