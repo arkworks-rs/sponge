@@ -1,6 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-//! A crate for the sponge trait.
+//! A crate for the cryptographic sponge trait.
 #![deny(
     const_err,
     future_incompatible,
@@ -31,16 +31,16 @@ pub enum OutputSize {
     },
 }
 
-/// An interface for objects that can be absorbed into a specified `FiatShamirSponge`.
-pub trait Absorbable<F: Field, S: FiatShamirSponge<F>> {
-    /// Converts the object into the input of the specified `FiatShamirSponge`.
+/// An interface for objects that can be absorbed into a specified `CryptographicSponge`.
+pub trait Absorbable<F: Field, S: CryptographicSponge<F>> {
+    /// Converts the object into the input of the specified `CryptographicSponge`.
     fn to_sponge_input(&self) -> S::Input;
 }
 
 /// The interface for a sponge.
 /// A sponge can `absorb` or take in inputs and later `squeeze` or output field elements.
 /// The output depends on previous `absorb` and `squeeze` calls.
-pub trait FiatShamirSponge<F: Field> {
+pub trait CryptographicSponge<F: Field> {
     /// The input type.
     type Input;
 
