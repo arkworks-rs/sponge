@@ -43,8 +43,8 @@ pub trait Absorbable<F: Field> {
     /// Converts the object into a list of bytes that can be absorbed by a `CryptographicSponge`.
     fn to_sponge_bytes(&self) -> Vec<u8>;
 
-    /// Converts the object into a field element that can be absorbed by a `CryptographicSponge`.
-    fn to_sponge_field_element(&self) -> F;
+    /// Converts the object into field elements that can be absorbed by a `CryptographicSponge`.
+    fn to_sponge_field_elements(&self) -> Vec<F>;
 }
 
 /// The interface for a sponge.
