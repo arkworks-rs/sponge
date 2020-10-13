@@ -47,9 +47,10 @@ pub trait Absorbable<F: Field> {
     fn to_sponge_field_elements(&self) -> Vec<F>;
 }
 
-/// The interface for a sponge.
+/// The interface for a cryptographic sponge.
 /// A sponge can `absorb` or take in inputs and later `squeeze` or output bytes or field elements.
-/// The output depends on previous `absorb` and `squeeze` calls.
+/// The outputs are dependent on previous `absorb` and `squeeze` calls, and the set of possible
+/// outputs is implementation-dependent.
 pub trait CryptographicSponge<F: Field> {
     /// Initialize a new instance of the sponge.
     fn new() -> Self;
@@ -57,25 +58,19 @@ pub trait CryptographicSponge<F: Field> {
     /// Absorb an input.
     fn absorb(&mut self, input: &impl Absorbable<F>);
 
-    /// Output a list of bytes of full length.
-    /// The full length is implementation-dependent and the output is byte-aligned.
-    /// Depends on previous `absorb` and `squeeze` calls.
+    /// Output a list of bytes from the entire bytes output set.
     fn squeeze_bytes(&mut self) -> Vec<u8> {
         self.squeeze_bytes_with_size(OutputSize::Full)
     }
 
-    /// Output a list of bytes with a specified maximum length.
-    /// The output is byte-aligned.
-    /// Depends on previous `absorb` and `squeeze` calls.
+    /// Output a list of bytes from a subset of the bytes output set.
     fn squeeze_bytes_with_size(&mut self, size: OutputSize) -> Vec<u8>;
 
-    /// Output a field element from the entire field.
-    /// Depends on previous `absorb` and `squeeze` calls.
-    fn squeeze_field_element(&mut self) -> F {
-        self.squeeze_field_element_with_size(OutputSize::Full)
+    /// Output a list of field elements from the entire field elements output set.
+    fn squeeze_field_elements(&mut self) -> Vec<F> {
+        self.squeeze_field_elements_with_size(OutputSize::Full)
     }
 
-    /// Output a field element from a subset of the field.
-    /// Depends on previous `absorb` and `squeeze` calls.
-    fn squeeze_field_element_with_size(&mut self, size: OutputSize) -> F;
+    /// Output a list of field elements from a subset of the field elements output set.
+    fn squeeze_field_elements_with_size(&mut self, size: OutputSize) -> Vec<F>;
 }
