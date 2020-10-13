@@ -18,25 +18,15 @@
 #![forbid(unsafe_code)]
 
 #[cfg(feature = "std")]
+#[macro_use]
 extern crate std;
 
 #[cfg(not(feature = "std"))]
+#[macro_use]
 extern crate alloc as std;
 
 use ark_ff::Field;
 use std::vec::Vec;
-
-/// An enum for specifying an output size.
-pub enum OutputSize {
-    /// Sample outputs from the entire output set.
-    Full,
-
-    /// Sample outputs from a subset of the output set.
-    Truncated {
-        /// The maximum size of the subset is 2^num_bits.
-        num_bits: usize,
-    },
-}
 
 /// An interface for objects that can be absorbed by a `CryptographicSponge`.
 pub trait Absorbable<F: Field> {
@@ -47,30 +37,40 @@ pub trait Absorbable<F: Field> {
     fn to_sponge_field_elements(&self) -> Vec<F>;
 }
 
+/// An enum for specifying the output field element size.
+#[derive(Clone)]
+pub enum FieldElementSize {
+    /// Sample field elements from the entire field.
+    Full,
+
+    /// Sample field elements from a subset of the field.
+    Truncated {
+        /// The maximum size of the subset is 2^num_bits.
+        num_bits: usize,
+    },
+}
+
 /// The interface for a cryptographic sponge.
 /// A sponge can `absorb` or take in inputs and later `squeeze` or output bytes or field elements.
-/// The outputs are dependent on previous `absorb` and `squeeze` calls, and the set of possible
-/// outputs is implementation-dependent.
+/// The outputs are dependent on previous `absorb` and `squeeze` calls.
 pub trait CryptographicSponge<F: Field> {
     /// Initialize a new instance of the sponge.
     fn new() -> Self;
 
-    /// Absorb an input.
+    /// Absorb an input into the sponge.
     fn absorb(&mut self, input: &impl Absorbable<F>);
 
-    /// Output a list of bytes from the entire bytes output set.
-    fn squeeze_bytes(&mut self) -> Vec<u8> {
-        self.squeeze_bytes_with_size(OutputSize::Full)
+    /// Squeeze `num_bytes` bytes from the sponge.
+    fn squeeze_bytes(&mut self, num_bytes: usize) -> Vec<u8>;
+
+    /// Squeeze `sizes.len()` field elements from the sponge, where the `i`-th element of
+    /// the output has size `sizes[i]`.
+    fn squeeze_field_elements_with_sizes(&mut self, sizes: &[FieldElementSize]) -> Vec<F>;
+
+    /// Squeeze `num_elements` field elements from the sponge.
+    fn squeeze_field_elements(&mut self, num_elements: usize) -> Vec<F> {
+        self.squeeze_field_elements_with_sizes(
+            vec![FieldElementSize::Full; num_elements].as_slice(),
+        )
     }
-
-    /// Output a list of bytes from a subset of the bytes output set.
-    fn squeeze_bytes_with_size(&mut self, size: OutputSize) -> Vec<u8>;
-
-    /// Output a list of field elements from the entire field elements output set.
-    fn squeeze_field_elements(&mut self) -> Vec<F> {
-        self.squeeze_field_elements_with_size(OutputSize::Full)
-    }
-
-    /// Output a list of field elements from a subset of the field elements output set.
-    fn squeeze_field_elements_with_size(&mut self, size: OutputSize) -> Vec<F>;
 }
