@@ -206,6 +206,20 @@ macro_rules! impl_absorbable_size {
     };
 }
 
+macro_rules! impl_absorbable_size {
+    ($t:ident) => {
+        impl<F: PrimeField> Absorbable<F> for $t {
+            fn to_sponge_bytes(&self) -> Vec<u8> {
+                Absorbable::<F>::to_sponge_bytes(&(*self as u64))
+            }
+
+            fn to_sponge_field_elements(&self) -> Vec<F> {
+                (*self as u64).to_sponge_field_elements()
+            }
+        }
+    };
+}
+
 impl_absorbable_size!(usize);
 impl_absorbable_size!(isize);
 
