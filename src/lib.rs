@@ -187,8 +187,23 @@ impl_absorbable_to_le_bytes!(i16);
 impl_absorbable_to_le_bytes!(i32);
 impl_absorbable_to_le_bytes!(i64);
 impl_absorbable_to_le_bytes!(i128);
-impl_absorbable_to_le_bytes!(isize);
-impl_absorbable_to_le_bytes!(usize);
+
+macro_rules! impl_absorbable_size {
+    ($t:ident) => {
+        impl<F: PrimeField> Absorbable<F> for $t {
+            fn to_sponge_bytes(&self) -> Vec<u8> {
+                Absorbable::<F>::to_sponge_bytes(&(*self as u64))
+            }
+
+            fn to_sponge_field_elements(&self) -> Vec<F> {
+                (*self as u64).to_sponge_field_elements()
+            }
+        }
+    };
+}
+
+impl_absorbable_size!(usize);
+impl_absorbable_size!(isize);
 
 impl<F: PrimeField> Absorbable<F> for bool {
     fn to_sponge_bytes(&self) -> Vec<u8> {
