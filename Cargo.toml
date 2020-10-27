@@ -5,4 +5,8 @@ authors = []
 edition = "2018"
 
 [dependencies]
-ark-ff = { git = "https://github.com/arkworks-rs/algebra/", version = "0.1", default_features = false }
+ark-ff = { git = "https://github.com/arkworks-rs/algebra/", default_features = false }
+
+[features]
+default = ["std"]
+std = []
