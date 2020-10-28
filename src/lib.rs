@@ -95,7 +95,7 @@ impl<F: PrimeField> Absorbable<F> for Vec<u8> {
     }
 
     fn to_sponge_field_elements(&self) -> Vec<F> {
-        self.to_field_elements().unwrap()
+        self.as_slice().to_sponge_field_elements()
     }
 }
 
@@ -123,7 +123,7 @@ macro_rules! impl_absorbable_field {
 
         impl<P: $params> Absorbable<$field<P>> for Vec<$field<P>> {
             fn to_sponge_bytes(&self) -> Vec<u8> {
-                to_bytes![self].unwrap()
+                self.as_slice().to_sponge_bytes()
             }
 
             fn to_sponge_field_elements(&self) -> Vec<$field<P>> {
