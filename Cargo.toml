@@ -6,7 +6,9 @@ edition = "2018"
 
 [dependencies]
 ark-ff = { git = "https://github.com/arkworks-rs/algebra/", default_features = false }
+ark-std = { git = "https://github.com/arkworks-rs/utils", default-features = false }
+digest = { version = "0.9.0", default_features = false }
+ark-test-curves = { git = "https://github.com/arkworks-rs/algebra/", default_features = false, features = ["bls12_381_scalar_field"]}
 
-[features]
-default = ["std"]
-std = []
+[dev-dependencies]
+sha2 = { version = "0.9.1", default_features = false}

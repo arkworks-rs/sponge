@@ -1,7 +1,7 @@
-#![cfg_attr(not(feature = "std"), no_std)]
+#![no_std]
 
 //! A crate for the cryptographic sponge trait.
-#![deny(
+#![warn(
     const_err,
     future_incompatible,
     missing_docs,
@@ -17,20 +17,14 @@
 )]
 #![forbid(unsafe_code)]
 
-#[cfg(feature = "std")]
-#[macro_use]
-extern crate std;
-
-#[cfg(not(feature = "std"))]
-#[macro_use]
-extern crate alloc as std;
-
 use ark_ff::models::{
     Fp256, Fp256Parameters, Fp320, Fp320Parameters, Fp384, Fp384Parameters, Fp768, Fp768Parameters,
     Fp832, Fp832Parameters,
 };
 use ark_ff::{to_bytes, PrimeField, ToConstraintField};
-use std::vec::Vec;
+use ark_std::{vec, vec::Vec};
+
+pub mod digest_sponge;
 
 /// An enum for specifying the output field element size.
 #[derive(Clone)]
@@ -248,5 +242,35 @@ impl<F: PrimeField, A: Absorbable<F>> Absorbable<F> for Option<A> {
             output.extend(absorbable.to_sponge_field_elements());
         };
         output
+    }
+}
+
+/// Individually absorbs each element in a comma-separated list of absorbables into a sponge.
+/// Format is `absorb_all!(s; a_0, a_1, ..., a_n)`, where `s` is a mutable reference to a sponge
+/// and `a_n` implements Absorbable.
+#[macro_export]
+macro_rules! absorb_all {
+    ($sponge:expr; $($absorbable:expr),+ ) => {
+        $(
+            CryptographicSponge::absorb($sponge, $absorbable);
+        )+
+    };
+}
+
+#[cfg(test)]
+mod test {
+    use crate::*;
+    use ark_test_curves::bls12_381::Fr;
+    use sha2::Sha512;
+    use crate::FieldElementSize::Truncated;
+
+    #[test]
+    pub fn test() {
+        let mut sponge = DigestSponge::<Fr, Sha512>::new();
+        sponge.absorb(&9u8);
+        sponge.absorb(&10u8);
+        let mut output = sponge.squeeze_field_elements_with_sizes(&[Truncated {num_bits: 62}]);
+        let b = output.pop().unwrap();
+        let bytes = to_bytes!(b).unwrap();
     }
 }
