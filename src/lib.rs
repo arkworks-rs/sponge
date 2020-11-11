@@ -103,6 +103,16 @@ impl<F: PrimeField> Absorbable<F> for [u8] {
     }
 }
 
+impl<F: PrimeField> Absorbable<F> for &[u8] {
+    fn to_sponge_bytes(&self) -> Vec<u8> {
+        self.to_vec()
+    }
+
+    fn to_sponge_field_elements(&self) -> Vec<F> {
+        self.to_field_elements().unwrap()
+    }
+}
+
 macro_rules! impl_absorbable_field {
     ($field:ident, $params:ident) => {
         impl<P: $params> Absorbable<$field<P>> for $field<P> {
@@ -249,28 +259,11 @@ impl<F: PrimeField, A: Absorbable<F>> Absorbable<F> for Option<A> {
 /// Format is `absorb_all!(s; a_0, a_1, ..., a_n)`, where `s` is a mutable reference to a sponge
 /// and `a_n` implements Absorbable.
 #[macro_export]
-macro_rules! absorb_all {
-    ($sponge:expr; $($absorbable:expr),+ ) => {
+macro_rules! absorb {
+    ($sponge:expr, $($absorbable:expr),+ ) => {
         $(
             CryptographicSponge::absorb($sponge, $absorbable);
         )+
     };
 }
 
-#[cfg(test)]
-mod test {
-    use crate::*;
-    use ark_test_curves::bls12_381::Fr;
-    use sha2::Sha512;
-    use crate::FieldElementSize::Truncated;
-
-    #[test]
-    pub fn test() {
-        let mut sponge = DigestSponge::<Fr, Sha512>::new();
-        sponge.absorb(&9u8);
-        sponge.absorb(&10u8);
-        let mut output = sponge.squeeze_field_elements_with_sizes(&[Truncated {num_bits: 62}]);
-        let b = output.pop().unwrap();
-        let bytes = to_bytes!(b).unwrap();
-    }
-}
