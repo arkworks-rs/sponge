@@ -81,11 +81,11 @@ pub trait Absorbable<F: PrimeField> {
 
 impl<F: PrimeField> Absorbable<F> for u8 {
     fn to_sponge_bytes(&self) -> Vec<u8> {
-        vec![self.clone()]
+        vec![*self]
     }
 
     fn to_sponge_field_elements(&self) -> Vec<F> {
-        vec![F::from(self.clone())]
+        vec![F::from(*self)]
     }
 }
 
@@ -117,7 +117,7 @@ macro_rules! impl_absorbable_field {
             }
 
             fn to_sponge_field_elements(&self) -> Vec<$field<P>> {
-                vec![self.clone()]
+                vec![*self]
             }
         }
 
@@ -137,7 +137,7 @@ macro_rules! impl_absorbable_field {
             }
 
             fn to_sponge_field_elements(&self) -> Vec<$field<P>> {
-                self.to_vec().clone()
+                self.to_vec()
             }
         }
     };
@@ -157,7 +157,7 @@ macro_rules! impl_absorbable_unsigned {
             }
 
             fn to_sponge_field_elements(&self) -> Vec<F> {
-                vec![F::from(self.clone())]
+                vec![F::from(*self)]
             }
         }
     };
@@ -168,25 +168,29 @@ impl_absorbable_unsigned!(u32);
 impl_absorbable_unsigned!(u64);
 impl_absorbable_unsigned!(u128);
 
-macro_rules! impl_absorbable_to_le_bytes {
-    ($t:ident) => {
-        impl<F: PrimeField> Absorbable<F> for $t {
+macro_rules! impl_absorbable_signed {
+    ($signed:ident, $unsigned:ident) => {
+        impl<F: PrimeField> Absorbable<F> for $signed {
             fn to_sponge_bytes(&self) -> Vec<u8> {
                 self.to_le_bytes().to_vec()
             }
 
             fn to_sponge_field_elements(&self) -> Vec<F> {
-                self.to_le_bytes().to_sponge_field_elements()
+                let mut elem = F::from(self.abs() as $unsigned);
+                if *self < 0 {
+                    elem = -elem;
+                }
+                vec![elem]
             }
         }
     };
 }
 
-impl_absorbable_to_le_bytes!(i8);
-impl_absorbable_to_le_bytes!(i16);
-impl_absorbable_to_le_bytes!(i32);
-impl_absorbable_to_le_bytes!(i64);
-impl_absorbable_to_le_bytes!(i128);
+impl_absorbable_signed!(i8, u8);
+impl_absorbable_signed!(i16, u16);
+impl_absorbable_signed!(i32, u32);
+impl_absorbable_signed!(i64, u64);
+impl_absorbable_signed!(i128, u128);
 
 macro_rules! impl_absorbable_size {
     ($t:ident) => {
@@ -207,17 +211,17 @@ impl_absorbable_size!(isize);
 
 impl<F: PrimeField> Absorbable<F> for bool {
     fn to_sponge_bytes(&self) -> Vec<u8> {
-        vec![(self.clone() as u8)]
+        vec![(*self as u8)]
     }
 
     fn to_sponge_field_elements(&self) -> Vec<F> {
-        vec![F::from(self.clone())]
+        vec![F::from(*self)]
     }
 }
 
 impl<F: PrimeField, A: Absorbable<F>> Absorbable<F> for Option<A> {
     fn to_sponge_bytes(&self) -> Vec<u8> {
-        let mut output = vec![(self.is_some()) as u8];
+        let mut output = vec![self.is_some() as u8];
         if let Some(absorbable) = self {
             output.extend(absorbable.to_sponge_bytes());
         };
@@ -225,7 +229,7 @@ impl<F: PrimeField, A: Absorbable<F>> Absorbable<F> for Option<A> {
     }
 
     fn to_sponge_field_elements(&self) -> Vec<F> {
-        let mut output = vec![F::from((self.is_some()) as u8)];
+        let mut output = vec![F::from(self.is_some())];
         if let Some(absorbable) = self {
             output.extend(absorbable.to_sponge_field_elements());
         };
