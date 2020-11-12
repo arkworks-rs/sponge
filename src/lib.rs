@@ -236,3 +236,25 @@ impl<F: PrimeField, A: Absorbable<F>> Absorbable<F> for Option<A> {
         output
     }
 }
+
+impl<F: PrimeField, A: Absorbable<F>> Absorbable<F> for &A {
+    fn to_sponge_bytes(&self) -> Vec<u8> {
+        (*self).to_sponge_bytes()
+    }
+
+    fn to_sponge_field_elements(&self) -> Vec<F> {
+        (*self).to_sponge_field_elements()
+    }
+}
+
+/// Individually absorbs each element in a comma-separated list of absorbables into a sponge.
+/// Format is `absorb_all!(s, a_0, a_1, ..., a_n)`, where `s` is a mutable reference to a sponge
+/// and `a_n` implements Absorbable.
+#[macro_export]
+macro_rules! absorb_all {
+    ($sponge:expr, $($absorbable:expr),+ ) => {
+        $(
+            CryptographicSponge::absorb($sponge, &$absorbable);
+        )+
+    };
+}
