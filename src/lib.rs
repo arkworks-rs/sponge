@@ -248,10 +248,10 @@ impl<F: PrimeField, A: Absorbable<F>> Absorbable<F> for &A {
 }
 
 /// Individually absorbs each element in a comma-separated list of absorbables into a sponge.
-/// Format is `absorb_all!(s, a_0, a_1, ..., a_n)`, where `s` is a mutable reference to a sponge
-/// and `a_n` implements Absorbable.
+/// Format is `absorb!(s, a_0, a_1, ..., a_n)`, where `s` is a mutable reference to a sponge
+/// and each `a_i` implements `Absorbable`.
 #[macro_export]
-macro_rules! absorb_all {
+macro_rules! absorb {
     ($sponge:expr, $($absorbable:expr),+ ) => {
         $(
             CryptographicSponge::absorb($sponge, &$absorbable);
