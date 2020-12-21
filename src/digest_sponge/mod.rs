@@ -1,6 +1,6 @@
-use ark_std::{marker::PhantomData, vec, vec::Vec};
 use crate::{Absorbable, CryptographicSponge, FieldElementSize};
 use ark_ff::{PrimeField, ToConstraintField};
+use ark_std::{marker::PhantomData, vec, vec::Vec};
 use digest::consts::U64;
 use digest::Digest;
 
@@ -47,7 +47,7 @@ impl<F: PrimeField, D: Digest<OutputSize = U64>> DigestSponge<F, D> {
         // Changing operation state
         self.transition_state();
         self.operation_state = if self.operation_state == SpongeOperationState::Squeezing {
-             SpongeOperationState::Absorbing
+            SpongeOperationState::Absorbing
         } else {
             SpongeOperationState::Squeezing
         }

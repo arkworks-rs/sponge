@@ -9,6 +9,18 @@ ark-ff = { git = "https://github.com/arkworks-rs/algebra/", default_features = f
 ark-std = { git = "https://github.com/arkworks-rs/utils", default-features = false }
 digest = { version = "0.9.0", default_features = false }
 
+#Dependencies for r1cs
+ark-ed-on-bls12-381 = { git = "https://github.com/arkworks-rs/curves", default-features = false, optional = true }
+ark-marlin = { path = "../marlin", default-features = false, features = [ "density-optimized" ], optional = true }
+ark-nonnative-field = { git = "https://github.com/arkworks-rs/nonnative", default-features = false, optional = true }
+ark-relations = { git = "https://github.com/arkworks-rs/snark", default-features = false, optional = true }
+ark-r1cs-std = { git = "https://github.com/arkworks-rs/r1cs-std", default-features = false, optional = true }
+
 [dev-dependencies]
 sha2 = { version = "0.9.1", default_features = false}
 rand = "0.7.3"
+
+[features]
+default = [ "std", "r1cs" ]
+r1cs = [ "ark-ed-on-bls12-381/r1cs", "ark-marlin", "ark-nonnative-field", "ark-relations", "ark-r1cs-std" ]
+std = [ "ark-ff/std", "ark-nonnative-field/std" ]

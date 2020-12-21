@@ -17,6 +17,14 @@
 )]
 #![forbid(unsafe_code)]
 
+#[cfg(feature = "std")]
+#[macro_use]
+extern crate std;
+
+#[cfg(not(feature = "std"))]
+#[macro_use]
+extern crate alloc as std;
+
 use ark_ff::models::{
     Fp256, Fp256Parameters, Fp320, Fp320Parameters, Fp384, Fp384Parameters, Fp768, Fp768Parameters,
     Fp832, Fp832Parameters,
@@ -25,6 +33,8 @@ use ark_ff::{to_bytes, PrimeField, ToConstraintField};
 use ark_std::{vec, vec::Vec};
 
 pub mod digest_sponge;
+pub mod dummy;
+pub mod poseidon;
 
 /// An enum for specifying the output field element size.
 #[derive(Clone)]
