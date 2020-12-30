@@ -23,12 +23,18 @@ impl<F: PrimeField, CF: PrimeField> CryptographicSponge<F> for PoseidonSpongeWra
         unimplemented!()
     }
 
-    fn squeeze_field_elements_with_sizes(&mut self, _sizes: &[FieldElementSize]) -> Vec<F> {
-        unimplemented!()
-    }
-
-    fn squeeze_field_elements(&mut self, num_elements: usize) -> Vec<F> {
-        self.sponge.squeeze_nonnative_field_elements(num_elements)
+    fn squeeze_field_elements_with_sizes(&mut self, sizes: &[FieldElementSize]) -> Vec<F> {
+        sizes.into_iter().map(|size| {
+            if let FieldElementSize::Truncated { num_bits } = size {
+                if *num_bits == 128 {
+                    self.sponge.squeeze_128_bits_nonnative_field_elements(1).pop().unwrap()
+                } else {
+                    unimplemented!()
+                }
+            } else {
+                self.sponge.squeeze_nonnative_field_elements(1).pop().unwrap()
+            }
+        }).collect::<Vec<F>>()
     }
 }
 
