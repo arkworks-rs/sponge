@@ -6,15 +6,18 @@ edition = "2018"
 
 [dependencies]
 ark-ff = { git = "https://github.com/arkworks-rs/algebra/", default_features = false }
-ark-marlin = { git = "https://github.com/Will-Lin4/marlin", branch = "constraints", default-features = false, features = [ "density-optimized" ] }
 ark-std = { git = "https://github.com/arkworks-rs/utils", default-features = false }
 digest = { version = "0.9.0", default_features = false }
+rand_core = { version = "0.5" }
+rand_chacha = { version = "0.2.1", default-features = false }
+tracing = { version = "0.1", default-features = false, features = [ "attributes" ] }
 
 [dev-dependencies]
 sha2 = { version = "0.9.1", default_features = false}
 rand = "0.7.3"
-ark-ed-on-bls12-381 = { git = "https://github.com/arkworks-rs/curves", default-features = false }
+ark-ed-on-bls12-381 = { git = "https://github.com/arkworks-rs/curves", features = [ "r1cs" ] }
 ark-nonnative-field = { git = "https://github.com/arkworks-rs/nonnative", default-features = false }
+ark-pallas = { git = "https://github.com/arkworks-rs/curves", features = [ "r1cs" ] }
 ark-relations = { git = "https://github.com/arkworks-rs/snark", default-features = false }
 ark-r1cs-std = { git = "https://github.com/arkworks-rs/r1cs-std", default-features = false }
 

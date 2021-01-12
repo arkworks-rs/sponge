@@ -32,6 +32,8 @@ use ark_ff::models::{
 use ark_ff::{to_bytes, PrimeField, ToConstraintField};
 use ark_std::{vec, vec::Vec};
 
+pub mod constraints;
+
 pub mod digest_sponge;
 pub mod dummy;
 pub mod poseidon;

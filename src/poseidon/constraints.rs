@@ -5,104 +5,120 @@
  *      with small syntax changes.
  */
 
-use crate::{Absorbable, CryptographicSponge, FieldElementSize, Vec};
-use ark_ff::{BigInteger, FpParameters, PrimeField};
+use crate::constraints::CryptographicSpongeVar;
+use crate::poseidon::PoseidonSpongeState;
+use crate::Vec;
+use ark_ff::{FpParameters, PrimeField};
+use ark_r1cs_std::fields::fp::FpVar;
+use ark_r1cs_std::prelude::*;
+use ark_relations::r1cs::{ConstraintSystemRef, SynthesisError};
 use rand_core::SeedableRng;
 
-/// constraints for Poseidon
-pub mod constraints;
-
 #[derive(Clone)]
-enum PoseidonSpongeState {
-    Absorbing { next_absorb_index: usize },
-    Squeezing { next_squeeze_index: usize },
-}
-
-#[derive(Clone)]
-/// the sponge for Poseidon
-pub struct PoseidonSponge<F: PrimeField> {
+/// the gadget for Poseidon sponge
+pub struct PoseidonSpongeVar<F: PrimeField> {
+    /// constraint system
+    pub cs: ConstraintSystemRef<F>,
     /// number of rounds in a full-round operation
-    full_rounds: u32,
+    pub full_rounds: u32,
     /// number of rounds in a partial-round operation
-    partial_rounds: u32,
+    pub partial_rounds: u32,
     /// Exponent used in S-boxes
-    alpha: u64,
+    pub alpha: u64,
     /// Additive Round keys. These are added before each MDS matrix application to make it an affine shift.
     /// They are indexed by ark[round_num][state_element_index]
-    ark: Vec<Vec<F>>,
+    pub ark: Vec<Vec<F>>,
     /// Maximally Distance Separating Matrix.
-    mds: Vec<Vec<F>>,
+    pub mds: Vec<Vec<F>>,
 
     /// the sponge's state
-    state: Vec<F>,
+    pub state: Vec<FpVar<F>>,
     /// the rate
-    rate: usize,
+    pub rate: usize,
     /// the capacity
-    capacity: usize,
+    pub capacity: usize,
     /// the mode
     mode: PoseidonSpongeState,
 }
 
-impl<F: PrimeField> PoseidonSponge<F> {
-    fn apply_s_box(&self, state: &mut [F], is_full_round: bool) {
+impl<F: PrimeField> PoseidonSpongeVar<F> {
+    #[tracing::instrument(target = "r1cs", skip(self))]
+    fn apply_s_box(
+        &self,
+        state: &mut [FpVar<F>],
+        is_full_round: bool,
+    ) -> Result<(), SynthesisError> {
         // Full rounds apply the S Box (x^alpha) to every element of state
         if is_full_round {
-            for elem in state {
-                *elem = elem.pow(&[self.alpha]);
+            for state_item in state.iter_mut() {
+                *state_item = state_item.pow_by_constant(&[self.alpha])?;
             }
         }
         // Partial rounds apply the S Box (x^alpha) to just the final element of state
         else {
-            state[state.len() - 1] = state[state.len() - 1].pow(&[self.alpha]);
+            state[state.len() - 1] = state[state.len() - 1].pow_by_constant(&[self.alpha])?;
         }
+
+        Ok(())
     }
 
-    fn apply_ark(&self, state: &mut [F], round_number: usize) {
+    #[tracing::instrument(target = "r1cs", skip(self))]
+    fn apply_ark(&self, state: &mut [FpVar<F>], round_number: usize) -> Result<(), SynthesisError> {
         for (i, state_elem) in state.iter_mut().enumerate() {
-            state_elem.add_assign(&self.ark[round_number][i]);
+            *state_elem += self.ark[round_number][i];
         }
+        Ok(())
     }
 
-    fn apply_mds(&self, state: &mut [F]) {
+    #[tracing::instrument(target = "r1cs", skip(self))]
+    fn apply_mds(&self, state: &mut [FpVar<F>]) -> Result<(), SynthesisError> {
         let mut new_state = Vec::new();
+        let zero = FpVar::<F>::zero();
         for i in 0..state.len() {
-            let mut cur = F::zero();
+            let mut cur = zero.clone();
             for (j, state_elem) in state.iter().enumerate() {
-                let term = state_elem.mul(&self.mds[i][j]);
-                cur.add_assign(&term);
+                let term = state_elem * self.mds[i][j];
+                cur += &term;
             }
             new_state.push(cur);
         }
-        state.clone_from_slice(&new_state[..state.len()])
+        state.clone_from_slice(&new_state[..state.len()]);
+        Ok(())
     }
 
-    fn permute(&mut self) {
+    #[tracing::instrument(target = "r1cs", skip(self))]
+    fn permute(&mut self) -> Result<(), SynthesisError> {
         let full_rounds_over_2 = self.full_rounds / 2;
         let mut state = self.state.clone();
         for i in 0..full_rounds_over_2 {
-            self.apply_ark(&mut state, i as usize);
-            self.apply_s_box(&mut state, true);
-            self.apply_mds(&mut state);
+            self.apply_ark(&mut state, i as usize)?;
+            self.apply_s_box(&mut state, true)?;
+            self.apply_mds(&mut state)?;
         }
-
         for i in full_rounds_over_2..(full_rounds_over_2 + self.partial_rounds) {
-            self.apply_ark(&mut state, i as usize);
-            self.apply_s_box(&mut state, false);
-            self.apply_mds(&mut state);
+            self.apply_ark(&mut state, i as usize)?;
+            self.apply_s_box(&mut state, false)?;
+            self.apply_mds(&mut state)?;
         }
 
         for i in
             (full_rounds_over_2 + self.partial_rounds)..(self.partial_rounds + self.full_rounds)
         {
-            self.apply_ark(&mut state, i as usize);
-            self.apply_s_box(&mut state, true);
-            self.apply_mds(&mut state);
+            self.apply_ark(&mut state, i as usize)?;
+            self.apply_s_box(&mut state, true)?;
+            self.apply_mds(&mut state)?;
         }
+
         self.state = state;
+        Ok(())
     }
 
-    // Absorbs everything in elements, this does not end in an absorbtion.
-    fn absorb_internal(&mut self, rate_start_index: usize, elements: &[F]) {
+    #[tracing::instrument(target = "r1cs", skip(self))]
+    fn absorb_internal(
+        &mut self,
+        rate_start_index: usize,
+        elements: &[FpVar<F>],
+    ) -> Result<(), SynthesisError> {
         // if we can finish in this call
         if rate_start_index + elements.len() <= self.rate {
             for (i, element) in elements.iter().enumerate() {
@@ -112,20 +128,25 @@ impl<F: PrimeField> PoseidonSponge<F> {
                 next_absorb_index: rate_start_index + elements.len(),
             };
 
-            return;
+            return Ok(());
         }
         // otherwise absorb (rate - rate_start_index) elements
         let num_elements_absorbed = self.rate - rate_start_index;
         for (i, element) in elements.iter().enumerate().take(num_elements_absorbed) {
             self.state[i + rate_start_index] += element;
         }
-        self.permute();
+        self.permute()?;
         // Tail recurse, with the input elements being truncated by num elements absorbed
-        self.absorb_internal(0, &elements[num_elements_absorbed..]);
+        self.absorb_internal(0, &elements[num_elements_absorbed..])
     }
 
     // Squeeze |output| many elements. This does not end in a squeeze
-    fn squeeze_internal(&mut self, rate_start_index: usize, output: &mut [F]) {
+    #[tracing::instrument(target = "r1cs", skip(self))]
+    fn squeeze_internal(
+        &mut self,
+        rate_start_index: usize,
+        output: &mut [FpVar<F>],
+    ) -> Result<(), SynthesisError> {
         // if we can finish in this call
         if rate_start_index + output.len() <= self.rate {
             output
@@ -133,7 +154,7 @@ impl<F: PrimeField> PoseidonSponge<F> {
             self.mode = PoseidonSpongeState::Squeezing {
                 next_squeeze_index: rate_start_index + output.len(),
             };
-            return;
+            return Ok(());
         }
         // otherwise squeeze (rate - rate_start_index) elements
         let num_elements_squeezed = self.rate - rate_start_index;
@@ -143,15 +164,15 @@ impl<F: PrimeField> PoseidonSponge<F> {
 
         // Unless we are done with squeezing in this call, permute.
         if output.len() != self.rate {
-            self.permute();
+            self.permute()?;
         }
         // Tail recurse, with the correct change to indices in output happening due to changing the slice
-        self.squeeze_internal(0, &mut output[num_elements_squeezed..]);
+        self.squeeze_internal(0, &mut output[num_elements_squeezed..])
     }
 }
 
-impl<F: PrimeField> CryptographicSponge<F> for PoseidonSponge<F> {
-    fn new() -> Self {
+impl<F: PrimeField> CryptographicSpongeVar<F> for PoseidonSpongeVar<F> {
+    fn new(cs: ConstraintSystemRef<F>) -> Self {
         // Requires F to be Alt_Bn128Fr
         let full_rounds = 8;
         let partial_rounds = 31;
@@ -177,12 +198,14 @@ impl<F: PrimeField> CryptographicSponge<F> for PoseidonSponge<F> {
 
         let rate = 2;
         let capacity = 1;
-        let state = vec![F::zero(); rate + capacity];
+        let zero = FpVar::<F>::zero();
+        let state = vec![zero; rate + capacity];
         let mode = PoseidonSpongeState::Absorbing {
             next_absorb_index: 0,
         };
 
         Self {
+            cs,
             full_rounds,
             partial_rounds,
             alpha,
@@ -196,113 +219,73 @@ impl<F: PrimeField> CryptographicSponge<F> for PoseidonSponge<F> {
         }
     }
 
-    fn absorb(&mut self, input: &impl Absorbable<F>) {
-        let elems = input.to_sponge_field_elements();
-        if elems.is_empty() {
-            return;
+    fn cs(&self) -> ConstraintSystemRef<F> {
+        self.cs.clone()
+    }
+
+    fn absorb(&mut self, input: &[FpVar<F>]) -> Result<(), SynthesisError> {
+        if input.is_empty() {
+            return Ok(());
         }
 
         match self.mode {
             PoseidonSpongeState::Absorbing { next_absorb_index } => {
                 let mut absorb_index = next_absorb_index;
                 if absorb_index == self.rate {
-                    self.permute();
+                    self.permute()?;
                     absorb_index = 0;
                 }
-                self.absorb_internal(absorb_index, elems.as_slice());
+                self.absorb_internal(absorb_index, input)?;
             }
             PoseidonSpongeState::Squeezing {
                 next_squeeze_index: _,
             } => {
-                self.permute();
-                self.absorb_internal(0, elems.as_slice());
+                self.permute()?;
+                self.absorb_internal(0, input)?;
             }
         };
+
+        Ok(())
     }
 
-    fn squeeze_bytes(&mut self, num_bytes: usize) -> Vec<u8> {
+    fn squeeze_byte_vars(&mut self, num_bytes: usize) -> Result<Vec<UInt8<F>>, SynthesisError> {
         let usable_bytes = (F::Params::CAPACITY / 8) as usize;
 
         let num_elements = (num_bytes + usable_bytes - 1) / usable_bytes;
-        let src_elements = self.squeeze_field_elements(num_elements);
+        let src_elements = self.squeeze_field_element_vars(num_elements)?;
 
-        let mut bytes: Vec<u8> = Vec::with_capacity(usable_bytes * num_elements);
+        let mut bytes: Vec<UInt8<F>> = Vec::with_capacity(usable_bytes * num_elements);
         for elem in &src_elements {
-            let elem_bytes = elem.into_repr().to_bytes_le();
-            bytes.extend_from_slice(&elem_bytes[..usable_bytes]);
+            bytes.extend_from_slice(&elem.to_bytes()?[..usable_bytes]);
         }
 
         bytes.truncate(num_bytes);
-        bytes
+        Ok(bytes)
     }
 
-    fn squeeze_field_elements_with_sizes(&mut self, sizes: &[FieldElementSize]) -> Vec<F> {
-        unimplemented!()
-    }
-
-    fn squeeze_field_elements(&mut self, num_elements: usize) -> Vec<F> {
-        let mut squeezed_elems = vec![F::zero(); num_elements];
+    fn squeeze_field_element_vars(
+        &mut self,
+        num_elements: usize,
+    ) -> Result<Vec<FpVar<F>>, SynthesisError> {
+        let zero = FpVar::zero();
+        let mut squeezed_elems = vec![zero; num_elements];
         match self.mode {
             PoseidonSpongeState::Absorbing {
                 next_absorb_index: _,
             } => {
-                self.permute();
-                self.squeeze_internal(0, &mut squeezed_elems);
+                self.permute()?;
+                self.squeeze_internal(0, &mut squeezed_elems)?;
             }
             PoseidonSpongeState::Squeezing { next_squeeze_index } => {
                 let mut squeeze_index = next_squeeze_index;
                 if squeeze_index == self.rate {
-                    self.permute();
+                    self.permute()?;
                     squeeze_index = 0;
                 }
-                self.squeeze_internal(squeeze_index, &mut squeezed_elems);
+                self.squeeze_internal(squeeze_index, &mut squeezed_elems)?;
             }
         };
 
-        squeezed_elems
+        Ok(squeezed_elems)
     }
 }
-
-/*
-#[cfg(test)]
-pub mod tests {
-    use crate::poseidon::PoseidonSponge;
-    use crate::CryptographicSponge;
-    use ark_ed_on_bls12_381::{Fq, Fr};
-    use ark_ff::{to_bytes, One};
-    use ark_marlin::fiat_shamir::poseidon::PoseidonSponge as FSPoseidonSponge;
-    use ark_marlin::fiat_shamir::{FiatShamirAlgebraicSpongeRng, FiatShamirRng};
-    use crate::poseidon::constraints::PoseidonSpongeVar;
-    use ark_relations::r1cs::ConstraintSystem;
-    use crate::constraints::CryptographicSpongeVar;
-    use ark_r1cs_std::fields::fp::FpVar;
-    use ark_r1cs_std::fields::FieldVar;
-    use ark_r1cs_std::R1CSVar;
-
-    type F = Fr;
-    type CF = Fq;
-
-    #[test]
-    fn test() {
-        let mut s = PoseidonSponge::<CF>::new();
-        s.absorb(&CF::one());
-        let output = s.squeeze_bytes(180);
-        println!("{:?}", output);
-
-        /*
-        let mut s = FiatShamirAlgebraicSpongeRng::<F, CF, FSPoseidonSponge<CF>>::new();
-        s.absorb_native_field_elements(&[CF::one()]);
-        let output = s.squeeze_native_field_elements(1);
-        println!("{:?}", output);
-
-         */
-
-        let cs = ConstraintSystem::<CF>::new_ref();
-        let mut s = PoseidonSpongeVar::new(cs);
-        s.absorb(&[FpVar::<CF>::one()]).unwrap();
-        let output = s.squeeze_byte_vars(180).unwrap();
-        println!("{:?}", output.value().unwrap());
-    }
-}
-
- */
