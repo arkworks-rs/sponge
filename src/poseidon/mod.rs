@@ -10,6 +10,7 @@ use ark_ff::{BigInteger, FpParameters, PrimeField};
 use rand_core::SeedableRng;
 
 /// constraints for Poseidon
+#[cfg(feature = "r1cs")]
 pub mod constraints;
 
 #[derive(Clone)]

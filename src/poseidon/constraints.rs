@@ -172,6 +172,7 @@ impl<F: PrimeField> PoseidonSpongeVar<F> {
 }
 
 impl<F: PrimeField> CryptographicSpongeVar<F> for PoseidonSpongeVar<F> {
+    #[tracing::instrument(target = "r1cs", skip(cs))]
     fn new(cs: ConstraintSystemRef<F>) -> Self {
         // Requires F to be Alt_Bn128Fr
         let full_rounds = 8;
@@ -219,10 +220,12 @@ impl<F: PrimeField> CryptographicSpongeVar<F> for PoseidonSpongeVar<F> {
         }
     }
 
+    #[tracing::instrument(target = "r1cs", skip(self))]
     fn cs(&self) -> ConstraintSystemRef<F> {
         self.cs.clone()
     }
 
+    #[tracing::instrument(target = "r1cs", skip(self, input))]
     fn absorb(&mut self, input: &[FpVar<F>]) -> Result<(), SynthesisError> {
         if input.is_empty() {
             return Ok(());
@@ -248,6 +251,7 @@ impl<F: PrimeField> CryptographicSpongeVar<F> for PoseidonSpongeVar<F> {
         Ok(())
     }
 
+    #[tracing::instrument(target = "r1cs", skip(self))]
     fn squeeze_byte_vars(&mut self, num_bytes: usize) -> Result<Vec<UInt8<F>>, SynthesisError> {
         let usable_bytes = (F::Params::CAPACITY / 8) as usize;
 
@@ -263,6 +267,7 @@ impl<F: PrimeField> CryptographicSpongeVar<F> for PoseidonSpongeVar<F> {
         Ok(bytes)
     }
 
+    #[tracing::instrument(target = "r1cs", skip(self))]
     fn squeeze_field_element_vars(
         &mut self,
         num_elements: usize,

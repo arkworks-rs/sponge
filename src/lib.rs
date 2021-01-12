@@ -1,4 +1,4 @@
-#![no_std]
+#![cfg_attr(not(feature = "std"), no_std)]
 
 //! A crate for the cryptographic sponge trait.
 #![warn(
@@ -23,15 +23,16 @@ extern crate std;
 
 #[cfg(not(feature = "std"))]
 #[macro_use]
-extern crate alloc as std;
+extern crate ark_std as std;
 
 use ark_ff::models::{
     Fp256, Fp256Parameters, Fp320, Fp320Parameters, Fp384, Fp384Parameters, Fp768, Fp768Parameters,
     Fp832, Fp832Parameters,
 };
 use ark_ff::{to_bytes, PrimeField, ToConstraintField};
-use ark_std::{vec, vec::Vec};
+use std::{vec, vec::Vec};
 
+#[cfg(feature = "r1cs")]
 pub mod constraints;
 
 pub mod digest_sponge;
