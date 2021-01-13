@@ -12,6 +12,7 @@ rand_core = { version = "0.5" }
 rand_chacha = { version = "0.2.1", default-features = false }
 tracing = { version = "0.1", default-features = false, features = [ "attributes" ] }
 
+ark-nonnative-field = { git = "https://github.com/arkworks-rs/nonnative", default-features = false, optional = true }
 ark-r1cs-std = { git = "https://github.com/arkworks-rs/r1cs-std", default-features = false, optional = true }
 ark-relations = { git = "https://github.com/arkworks-rs/snark", default-features = false, optional = true }
 
@@ -24,5 +25,5 @@ ark-pallas = { git = "https://github.com/arkworks-rs/curves", features = [ "r1cs
 
 [features]
 default = [ "std", "r1cs" ]
-std = [ "ark-ff/std", "ark-nonnative-field/std" ]
-r1cs = ["ark-relations", "ark-r1cs-std"]
+std = [ "ark-ff/std", "ark-nonnative-field/std", "ark-std/std" ]
+r1cs = ["ark-nonnative-field", "ark-relations", "ark-r1cs-std"]

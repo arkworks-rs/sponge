@@ -29,14 +29,19 @@ use ark_ff::models::{
     Fp256, Fp256Parameters, Fp320, Fp320Parameters, Fp384, Fp384Parameters, Fp768, Fp768Parameters,
     Fp832, Fp832Parameters,
 };
-use ark_ff::{to_bytes, PrimeField, ToConstraintField};
+use ark_ff::{to_bytes, FpParameters, PrimeField, ToConstraintField};
+use std::cmp::Ordering;
+use std::marker::PhantomData;
 use std::{vec, vec::Vec};
 
 #[cfg(feature = "r1cs")]
 pub mod constraints;
 
-pub mod digest_sponge;
-pub mod dummy;
+//pub mod helpers;
+
+// TODO: Add back
+//pub mod digest_sponge;
+//pub mod dummy;
 pub mod poseidon;
 
 /// An enum for specifying the output field element size.
@@ -52,26 +57,96 @@ pub enum FieldElementSize {
     },
 }
 
+impl FieldElementSize {
+    pub fn num_bits<F: PrimeField>(&self) -> usize {
+        if let FieldElementSize::Truncated { num_bits } = self {
+            *num_bits.min(&(F::Params::CAPACITY as usize))
+        } else {
+            F::Params::CAPACITY as usize
+        }
+    }
+}
+
 /// The interface for a cryptographic sponge.
 /// A sponge can `absorb` or take in inputs and later `squeeze` or output bytes or field elements.
 /// The outputs are dependent on previous `absorb` and `squeeze` calls.
-pub trait CryptographicSponge<F: PrimeField> {
+pub trait CryptographicSponge<CF: PrimeField> {
     /// Initialize a new instance of the sponge.
     fn new() -> Self;
 
     /// Absorb an input into the sponge.
-    fn absorb(&mut self, input: &impl Absorbable<F>);
+    fn absorb(&mut self, input: &impl Absorbable<CF>);
 
     /// Squeeze `num_bytes` bytes from the sponge.
     fn squeeze_bytes(&mut self, num_bytes: usize) -> Vec<u8>;
 
+    /// Squeeze `num_bits` bits from the sponge.
+    fn squeeze_bits(&mut self, num_bits: usize) -> Vec<bool>;
+
     /// Squeeze `sizes.len()` field elements from the sponge, where the `i`-th element of
     /// the output has size `sizes[i]`.
-    fn squeeze_field_elements_with_sizes(&mut self, sizes: &[FieldElementSize]) -> Vec<F>;
+    fn squeeze_field_elements_with_sizes(&mut self, sizes: &[FieldElementSize]) -> Vec<CF>;
 
     /// Squeeze `num_elements` field elements from the sponge.
-    fn squeeze_field_elements(&mut self, num_elements: usize) -> Vec<F> {
+    fn squeeze_field_elements(&mut self, num_elements: usize) -> Vec<CF> {
         self.squeeze_field_elements_with_sizes(
+            vec![FieldElementSize::Full; num_elements].as_slice(),
+        )
+    }
+
+    /// Squeeze `sizes.len()` nonnative field elements from the sponge, where the `i`-th element of
+    /// the output has size `sizes[i]`.
+    fn squeeze_nonnative_field_elements_with_sizes<F: PrimeField>(
+        &mut self,
+        sizes: &[FieldElementSize],
+    ) -> Vec<F> {
+        if sizes.len() == 0 {
+            return Vec::new();
+        }
+
+        let mut max_nonnative_bits = 0usize;
+        let mut total_bits = 0usize;
+        for size in sizes {
+            let bits = size.num_bits::<F>();
+            if max_nonnative_bits < bits {
+                max_nonnative_bits = bits
+            }
+
+            total_bits += bits;
+        }
+
+        let mut lookup_table = Vec::<F>::new();
+        let mut cur = F::one();
+        for _ in 0..max_nonnative_bits {
+            lookup_table.push(cur);
+            cur.double_in_place();
+        }
+
+        let bits = self.squeeze_bits(total_bits);
+        let mut nonnative_field_elements = Vec::with_capacity(sizes.len());
+
+        let mut bits_window = bits.as_slice();
+        for size in sizes {
+            let num_bits = size.num_bits::<F>();
+            let nonnative_bits_le: &[bool] = &bits_window[..num_bits];
+            bits_window = &bits_window[num_bits..];
+
+            let mut nonnative_field_element = F::zero();
+            for (i, bit) in nonnative_bits_le.iter().enumerate() {
+                if *bit {
+                    nonnative_field_element += &lookup_table[i];
+                }
+            }
+
+            nonnative_field_elements.push(nonnative_field_element);
+        }
+
+        nonnative_field_elements
+    }
+
+    /// Squeeze `num_elements` nonnative field elements from the sponge.
+    fn squeeze_nonnative_field_elements<F: PrimeField>(&mut self, num_elements: usize) -> Vec<F> {
+        self.squeeze_nonnative_field_elements_with_sizes::<F>(
             vec![FieldElementSize::Full; num_elements].as_slice(),
         )
     }
@@ -286,6 +361,17 @@ macro_rules! absorb {
     ($sponge:expr, $($absorbable:expr),+ ) => {
         $(
             CryptographicSponge::absorb($sponge, &$absorbable);
+        )+
+    };
+}
+
+#[macro_export]
+macro_rules! absorb_iter {
+    ($sponge:expr, $($absorbable:expr),+ ) => {
+        $(
+            for ab in &$absorbable {
+                CryptographicSponge::absorb($sponge, &ab);
+            }
         )+
     };
 }

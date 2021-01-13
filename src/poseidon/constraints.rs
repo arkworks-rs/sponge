@@ -252,11 +252,11 @@ impl<F: PrimeField> CryptographicSpongeVar<F> for PoseidonSpongeVar<F> {
     }
 
     #[tracing::instrument(target = "r1cs", skip(self))]
-    fn squeeze_byte_vars(&mut self, num_bytes: usize) -> Result<Vec<UInt8<F>>, SynthesisError> {
+    fn squeeze_bytes(&mut self, num_bytes: usize) -> Result<Vec<UInt8<F>>, SynthesisError> {
         let usable_bytes = (F::Params::CAPACITY / 8) as usize;
 
         let num_elements = (num_bytes + usable_bytes - 1) / usable_bytes;
-        let src_elements = self.squeeze_field_element_vars(num_elements)?;
+        let src_elements = self.squeeze_field_elements(num_elements)?;
 
         let mut bytes: Vec<UInt8<F>> = Vec::with_capacity(usable_bytes * num_elements);
         for elem in &src_elements {
@@ -268,7 +268,23 @@ impl<F: PrimeField> CryptographicSpongeVar<F> for PoseidonSpongeVar<F> {
     }
 
     #[tracing::instrument(target = "r1cs", skip(self))]
-    fn squeeze_field_element_vars(
+    fn squeeze_bits(&mut self, num_bits: usize) -> Result<Vec<Boolean<F>>, SynthesisError> {
+        let usable_bits = F::Params::CAPACITY as usize;
+
+        let num_elements = (num_bits + usable_bits - 1) / usable_bits;
+        let src_elements = self.squeeze_field_elements(num_elements)?;
+
+        let mut bits: Vec<Boolean<F>> = Vec::with_capacity(usable_bits * num_elements);
+        for elem in &src_elements {
+            bits.extend_from_slice(&elem.to_bits_le()?[..usable_bits]);
+        }
+
+        bits.truncate(num_bits);
+        Ok(bits)
+    }
+
+    #[tracing::instrument(target = "r1cs", skip(self))]
+    fn squeeze_field_elements(
         &mut self,
         num_elements: usize,
     ) -> Result<Vec<FpVar<F>>, SynthesisError> {

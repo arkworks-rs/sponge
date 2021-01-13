@@ -237,6 +237,22 @@ impl<F: PrimeField> CryptographicSponge<F> for PoseidonSponge<F> {
         bytes
     }
 
+    fn squeeze_bits(&mut self, num_bits: usize) -> Vec<bool> {
+        let usable_bits = F::Params::CAPACITY as usize;
+
+        let num_elements = (num_bits + usable_bits - 1) / usable_bits;
+        let src_elements = self.squeeze_field_elements(num_elements);
+
+        let mut bits: Vec<bool> = Vec::with_capacity(usable_bits * num_elements);
+        for elem in &src_elements {
+            let elem_bits = elem.into_repr().to_bits_le();
+            bits.extend_from_slice(&elem_bits[..usable_bits]);
+        }
+
+        bits.truncate(num_bits);
+        bits
+    }
+
     fn squeeze_field_elements_with_sizes(&mut self, sizes: &[FieldElementSize]) -> Vec<F> {
         unimplemented!()
     }
