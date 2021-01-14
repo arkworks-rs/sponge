@@ -37,7 +37,7 @@ pub trait CryptographicSpongeVar<CF: PrimeField> {
         num_elements: usize,
     ) -> Result<Vec<FpVar<CF>>, SynthesisError>;
 
-    fn squeeze_nonnative_field_element_with_sizes<F: PrimeField>(
+    fn squeeze_nonnative_field_elements_with_sizes<F: PrimeField>(
         &mut self,
         sizes: &[FieldElementSize],
     ) -> Result<(Vec<NonNativeFieldVar<F, CF>>, Vec<Vec<Boolean<CF>>>), SynthesisError> {
@@ -119,11 +119,11 @@ pub trait CryptographicSpongeVar<CF: PrimeField> {
         Ok((dest_gadgets, dest_bits))
     }
 
-    fn squeeze_nonnative_field_element<F: PrimeField>(
+    fn squeeze_nonnative_field_elements<F: PrimeField>(
         &mut self,
         num_elements: usize,
     ) -> Result<(Vec<NonNativeFieldVar<F, CF>>, Vec<Vec<Boolean<CF>>>), SynthesisError> {
-        self.squeeze_nonnative_field_element_with_sizes::<F>(
+        self.squeeze_nonnative_field_elements_with_sizes::<F>(
             vec![FieldElementSize::Full; num_elements].as_slice(),
         )
     }
@@ -161,7 +161,7 @@ pub mod tests {
             FieldElementSize::Truncated { num_bits: 128 },
         ]);
         let out_var = s_var
-            .squeeze_nonnative_field_element_with_sizes::<F>(&[
+            .squeeze_nonnative_field_elements_with_sizes::<F>(&[
                 FieldElementSize::Truncated { num_bits: 128 },
                 FieldElementSize::Truncated { num_bits: 180 },
                 FieldElementSize::Full,
