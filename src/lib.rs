@@ -375,3 +375,62 @@ macro_rules! absorb_iter {
         )+
     };
 }
+
+pub trait DomainSeparator {
+    fn domain() -> Vec<u8>;
+}
+
+pub struct DomainSeparatedSponge<CF: PrimeField, S: CryptographicSponge<CF>, D: DomainSeparator>
+{
+    sponge: S,
+    _field_phantom: PhantomData<CF>,
+    _domain_phantom: PhantomData<D>,
+}
+
+impl<CF: PrimeField, S: CryptographicSponge<CF>, D: DomainSeparator> CryptographicSponge<CF>
+for DomainSeparatedSponge<CF, S, D>
+{
+    fn new() -> Self {
+        let mut sponge = S::new();
+        sponge.absorb(&D::domain());
+        sponge.squeeze_bytes(1);
+
+        Self {
+            sponge,
+            _field_phantom: PhantomData,
+            _domain_phantom: PhantomData,
+        }
+    }
+
+    fn absorb(&mut self, input: &impl Absorbable<CF>) {
+        self.sponge.absorb(input);
+    }
+
+    fn squeeze_bytes(&mut self, num_bytes: usize) -> Vec<u8> {
+        self.sponge.squeeze_bytes(num_bytes)
+    }
+
+    fn squeeze_bits(&mut self, num_bits: usize) -> Vec<bool> {
+        self.sponge.squeeze_bits(num_bits)
+    }
+
+    fn squeeze_field_elements_with_sizes(&mut self, sizes: &[FieldElementSize]) -> Vec<CF> {
+        self.sponge.squeeze_field_elements_with_sizes(sizes)
+    }
+
+    fn squeeze_field_elements(&mut self, num_elements: usize) -> Vec<CF> {
+        self.sponge.squeeze_field_elements(num_elements)
+    }
+
+    fn squeeze_nonnative_field_elements_with_sizes<F: PrimeField>(
+        &mut self,
+        sizes: &[FieldElementSize],
+    ) -> Vec<F> {
+        self.sponge
+            .squeeze_nonnative_field_elements_with_sizes(sizes)
+    }
+
+    fn squeeze_nonnative_field_elements<F: PrimeField>(&mut self, num_elements: usize) -> Vec<F> {
+        self.sponge.squeeze_nonnative_field_elements(num_elements)
+    }
+}
