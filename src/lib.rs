@@ -380,20 +380,19 @@ pub trait DomainSeparator {
     fn domain() -> Vec<u8>;
 }
 
-pub struct DomainSeparatedSponge<CF: PrimeField, S: CryptographicSponge<CF>, D: DomainSeparator>
-{
+pub struct DomainSeparatedSponge<CF: PrimeField, S: CryptographicSponge<CF>, D: DomainSeparator> {
     sponge: S,
     _field_phantom: PhantomData<CF>,
     _domain_phantom: PhantomData<D>,
 }
 
 impl<CF: PrimeField, S: CryptographicSponge<CF>, D: DomainSeparator> CryptographicSponge<CF>
-for DomainSeparatedSponge<CF, S, D>
+    for DomainSeparatedSponge<CF, S, D>
 {
     fn new() -> Self {
         let mut sponge = S::new();
         sponge.absorb(&D::domain());
-        sponge.squeeze_bytes(1);
+        sponge.squeeze_field_elements(1);
 
         Self {
             sponge,

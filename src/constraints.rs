@@ -1,5 +1,5 @@
-use crate::FieldElementSize;
-use ark_ff::PrimeField;
+use crate::{DomainSeparator, FieldElementSize};
+use ark_ff::{PrimeField, ToConstraintField};
 use ark_nonnative_field::params::get_params;
 use ark_nonnative_field::{AllocatedNonNativeFieldVar, NonNativeFieldVar};
 use ark_r1cs_std::alloc::AllocVar;
@@ -10,6 +10,7 @@ use ark_r1cs_std::R1CSVar;
 use ark_relations::lc;
 use ark_relations::r1cs::{ConstraintSystemRef, LinearCombination, SynthesisError};
 use ark_std::vec::Vec;
+use std::marker::PhantomData;
 
 // TODO: Work in progress. Redesign API later
 
@@ -126,6 +127,105 @@ pub trait CryptographicSpongeVar<CF: PrimeField> {
         self.squeeze_nonnative_field_elements_with_sizes::<F>(
             vec![FieldElementSize::Full; num_elements].as_slice(),
         )
+    }
+}
+
+pub struct DomainSeparatedSpongeVar<
+    CF: PrimeField,
+    S: CryptographicSpongeVar<CF>,
+    D: DomainSeparator,
+> {
+    sponge: S,
+    domain_separated: bool,
+
+    _affine_phantom: PhantomData<CF>,
+    _domain_separator_phantom: PhantomData<D>,
+}
+
+impl<CF, S, D> DomainSeparatedSpongeVar<CF, S, D>
+where
+    CF: PrimeField,
+    S: CryptographicSpongeVar<CF>,
+    D: DomainSeparator,
+{
+    fn try_separate_domain(&mut self) -> Result<(), SynthesisError> {
+        if !self.domain_separated {
+            let elems: Vec<CF> = D::domain().to_field_elements().unwrap();
+            let elem_vars = elems
+                .into_iter()
+                .map(|elem| FpVar::Constant(elem))
+                .collect::<Vec<_>>();
+
+            self.sponge.absorb(elem_vars.as_slice())?;
+            self.sponge.squeeze_field_elements(1)?;
+
+            self.domain_separated = true;
+        }
+        Ok(())
+    }
+}
+
+impl<CF, S, D> CryptographicSpongeVar<CF> for DomainSeparatedSpongeVar<CF, S, D>
+    where
+        CF: PrimeField,
+        S: CryptographicSpongeVar<CF>,
+        D: DomainSeparator,
+{
+    fn new(cs: ConstraintSystemRef<CF>) -> Self {
+        Self {
+            sponge: S::new(cs),
+            domain_separated: false,
+            _affine_phantom: PhantomData,
+            _domain_separator_phantom: PhantomData,
+        }
+    }
+
+    fn cs(&self) -> ConstraintSystemRef<CF> {
+        self.sponge.cs()
+    }
+
+    fn absorb(&mut self, input: &[FpVar<CF>]) -> Result<(), SynthesisError> {
+        self.try_separate_domain()?;
+        self.sponge.absorb(input)
+    }
+
+    fn squeeze_bytes(
+        &mut self,
+        num_bytes: usize,
+    ) -> Result<Vec<UInt8<CF>>, SynthesisError> {
+        self.try_separate_domain()?;
+        self.sponge.squeeze_bytes(num_bytes)
+    }
+
+    fn squeeze_bits(
+        &mut self,
+        num_bits: usize,
+    ) -> Result<Vec<Boolean<CF>>, SynthesisError> {
+        self.try_separate_domain()?;
+        self.sponge.squeeze_bits(num_bits)
+    }
+
+    fn squeeze_field_elements(
+        &mut self,
+        num_elements: usize,
+    ) -> Result<Vec<FpVar<CF>>, SynthesisError> {
+        self.try_separate_domain()?;
+        self.sponge.squeeze_field_elements(num_elements)
+    }
+
+    fn squeeze_nonnative_field_elements_with_sizes<F: PrimeField>(
+        &mut self,
+        sizes: &[FieldElementSize],
+    ) -> Result<
+        (
+            Vec<NonNativeFieldVar<F, CF>>,
+            Vec<Vec<Boolean<CF>>>,
+        ),
+        SynthesisError,
+    > {
+        self.try_separate_domain()?;
+        self.sponge
+            .squeeze_nonnative_field_elements_with_sizes(sizes)
     }
 }
 
