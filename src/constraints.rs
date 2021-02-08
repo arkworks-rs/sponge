@@ -1,6 +1,6 @@
 use crate::{DomainSeparator, FieldElementSize};
 use ark_ff::{PrimeField, ToConstraintField};
-use ark_nonnative_field::params::get_params;
+use ark_nonnative_field::params::{get_params, OptimizationType};
 use ark_nonnative_field::{AllocatedNonNativeFieldVar, NonNativeFieldVar};
 use ark_r1cs_std::alloc::AllocVar;
 use ark_r1cs_std::bits::boolean::Boolean;
@@ -23,12 +23,12 @@ pub fn bits_le_to_nonnative<F: PrimeField, CF: PrimeField>(
     let mut lookup_table = Vec::<Vec<CF>>::new();
     let mut cur = F::one();
     for _ in 0..max_nonnative_bits {
-        let repr = AllocatedNonNativeFieldVar::<F, CF>::get_limbs_representations(&cur)?;
+        let repr = AllocatedNonNativeFieldVar::<F, CF>::get_limbs_representations(&cur, OptimizationType::Constraints)?;
         lookup_table.push(repr);
         cur.double_in_place();
     }
 
-    let params = get_params(F::size_in_bits(), CF::size_in_bits());
+    let params = get_params(F::size_in_bits(), CF::size_in_bits(), OptimizationType::Constraints);
 
     let mut output = Vec::with_capacity(all_nonnative_bits_le.len());
     for nonnative_bits_le in all_nonnative_bits_le {
@@ -104,7 +104,7 @@ pub trait CryptographicSpongeVar<CF: PrimeField> {
         }
 
         let cs = self.cs();
-        let params = get_params(F::size_in_bits(), CF::size_in_bits());
+        let params = get_params(F::size_in_bits(), CF::size_in_bits(), OptimizationType::Constraints);
 
         let mut max_nonnative_bits = 0usize;
         let mut total_bits = 0usize;
@@ -122,7 +122,7 @@ pub trait CryptographicSpongeVar<CF: PrimeField> {
         let mut lookup_table = Vec::<Vec<CF>>::new();
         let mut cur = F::one();
         for _ in 0..max_nonnative_bits {
-            let repr = AllocatedNonNativeFieldVar::<F, CF>::get_limbs_representations(&cur)?;
+            let repr = AllocatedNonNativeFieldVar::<F, CF>::get_limbs_representations(&cur, OptimizationType::Constraints)?;
             lookup_table.push(repr);
             cur.double_in_place();
         }
