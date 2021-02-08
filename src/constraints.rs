@@ -12,8 +12,65 @@ use ark_relations::r1cs::{ConstraintSystemRef, LinearCombination, SynthesisError
 use ark_std::vec::Vec;
 use std::marker::PhantomData;
 
-// TODO: Work in progress. Redesign API later
+pub fn bits_le_to_nonnative<F: PrimeField, CF: PrimeField>(
+    cs: ConstraintSystemRef<CF>,
+    all_nonnative_bits_le: &[&Vec<Boolean<CF>>],
+) -> Result<Vec<NonNativeFieldVar<F, CF>>, SynthesisError> {
+    let mut max_nonnative_bits = all_nonnative_bits_le
+        .iter()
+        .fold(0usize, |max_num_bits, bits| max_num_bits.max(bits.len()));
 
+    let mut lookup_table = Vec::<Vec<CF>>::new();
+    let mut cur = F::one();
+    for _ in 0..max_nonnative_bits {
+        let repr = AllocatedNonNativeFieldVar::<F, CF>::get_limbs_representations(&cur)?;
+        lookup_table.push(repr);
+        cur.double_in_place();
+    }
+
+    let params = get_params(F::size_in_bits(), CF::size_in_bits());
+
+    let mut output = Vec::with_capacity(all_nonnative_bits_le.len());
+    for nonnative_bits_le in all_nonnative_bits_le {
+        let mut val = vec![CF::zero(); params.num_limbs];
+        let mut lc = vec![LinearCombination::<CF>::zero(); params.num_limbs];
+
+        for (j, bit) in nonnative_bits_le.iter().enumerate() {
+            if bit.value().unwrap_or_default() {
+                for (k, val) in val.iter_mut().enumerate().take(params.num_limbs) {
+                    *val += &lookup_table[j][k];
+                }
+            }
+
+            #[allow(clippy::needless_range_loop)]
+            for k in 0..params.num_limbs {
+                lc[k] = &lc[k] + bit.lc() * lookup_table[j][k];
+            }
+        }
+
+        let mut limbs = Vec::new();
+        for k in 0..params.num_limbs {
+            let gadget =
+                AllocatedFp::new_witness(ark_relations::ns!(cs, "alloc"), || Ok(val[k])).unwrap();
+            lc[k] = lc[k].clone() - (CF::one(), gadget.variable);
+            cs.enforce_constraint(lc!(), lc!(), lc[k].clone()).unwrap();
+            limbs.push(FpVar::<CF>::from(gadget));
+        }
+
+        output.push(NonNativeFieldVar::<F, CF>::Var(
+            AllocatedNonNativeFieldVar::<F, CF> {
+                limbs,
+                num_of_additions_over_normal_form: CF::zero(),
+                is_in_the_normal_form: true,
+                target_phantom: Default::default(),
+            },
+        ));
+    }
+
+    Ok(output)
+}
+
+// TODO: Work in progress. Redesign API later
 /// The interface for a cryptographic sponge.
 /// A sponge can `absorb` or take in inputs and later `squeeze` or output bytes or field elements.
 /// The outputs are dependent on previous `absorb` and `squeeze` calls.
@@ -166,10 +223,10 @@ where
 }
 
 impl<CF, S, D> CryptographicSpongeVar<CF> for DomainSeparatedSpongeVar<CF, S, D>
-    where
-        CF: PrimeField,
-        S: CryptographicSpongeVar<CF>,
-        D: DomainSeparator,
+where
+    CF: PrimeField,
+    S: CryptographicSpongeVar<CF>,
+    D: DomainSeparator,
 {
     fn new(cs: ConstraintSystemRef<CF>) -> Self {
         Self {
@@ -189,18 +246,12 @@ impl<CF, S, D> CryptographicSpongeVar<CF> for DomainSeparatedSpongeVar<CF, S, D>
         self.sponge.absorb(input)
     }
 
-    fn squeeze_bytes(
-        &mut self,
-        num_bytes: usize,
-    ) -> Result<Vec<UInt8<CF>>, SynthesisError> {
+    fn squeeze_bytes(&mut self, num_bytes: usize) -> Result<Vec<UInt8<CF>>, SynthesisError> {
         self.try_separate_domain()?;
         self.sponge.squeeze_bytes(num_bytes)
     }
 
-    fn squeeze_bits(
-        &mut self,
-        num_bits: usize,
-    ) -> Result<Vec<Boolean<CF>>, SynthesisError> {
+    fn squeeze_bits(&mut self, num_bits: usize) -> Result<Vec<Boolean<CF>>, SynthesisError> {
         self.try_separate_domain()?;
         self.sponge.squeeze_bits(num_bits)
     }
@@ -216,13 +267,7 @@ impl<CF, S, D> CryptographicSpongeVar<CF> for DomainSeparatedSpongeVar<CF, S, D>
     fn squeeze_nonnative_field_elements_with_sizes<F: PrimeField>(
         &mut self,
         sizes: &[FieldElementSize],
-    ) -> Result<
-        (
-            Vec<NonNativeFieldVar<F, CF>>,
-            Vec<Vec<Boolean<CF>>>,
-        ),
-        SynthesisError,
-    > {
+    ) -> Result<(Vec<NonNativeFieldVar<F, CF>>, Vec<Vec<Boolean<CF>>>), SynthesisError> {
         self.try_separate_domain()?;
         self.sponge
             .squeeze_nonnative_field_elements_with_sizes(sizes)
