@@ -175,7 +175,6 @@ where
                 .collect::<Vec<_>>();
 
             self.sponge.absorb(elem_vars.as_slice())?;
-            self.sponge.squeeze_field_elements(1)?;
 
             self.domain_separated = true;
         }

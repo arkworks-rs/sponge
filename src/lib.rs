@@ -397,7 +397,6 @@ impl<CF: PrimeField, S: CryptographicSponge<CF>, D: DomainSeparator> Cryptograph
     fn new() -> Self {
         let mut sponge = S::new();
         sponge.absorb(&D::domain());
-        sponge.squeeze_field_elements(1);
 
         Self {
             sponge,
