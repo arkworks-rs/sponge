@@ -7,6 +7,7 @@ edition = "2018"
 [dependencies]
 ark-ff = { git = "https://github.com/arkworks-rs/algebra/", default_features = false }
 ark-std = { git = "https://github.com/arkworks-rs/utils", default-features = false }
+derivative = { version = "2.1.1", features = [ "use_core" ] }
 digest = { version = "0.9.0", default_features = false }
 rand_core = { version = "0.5" }
 rand_chacha = { version = "0.2.1", default-features = false }

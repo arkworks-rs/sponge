@@ -12,10 +12,12 @@ use ark_relations::r1cs::{ConstraintSystemRef, LinearCombination, SynthesisError
 use ark_std::vec::Vec;
 use std::marker::PhantomData;
 
-pub fn bits_le_to_nonnative<F: PrimeField, CF: PrimeField>(
+pub fn bits_le_to_nonnative<'a, F: PrimeField, CF: PrimeField>(
     cs: ConstraintSystemRef<CF>,
-    all_nonnative_bits_le: &[&Vec<Boolean<CF>>],
+    all_nonnative_bits_le: impl IntoIterator<Item = &'a Vec<Boolean<CF>>>,
 ) -> Result<Vec<NonNativeFieldVar<F, CF>>, SynthesisError> {
+    let all_nonnative_bits_le = all_nonnative_bits_le.into_iter().collect::<Vec<_>>();
+
     let mut max_nonnative_bits = all_nonnative_bits_le
         .iter()
         .fold(0usize, |max_num_bits, bits| max_num_bits.max(bits.len()));
@@ -23,12 +25,19 @@ pub fn bits_le_to_nonnative<F: PrimeField, CF: PrimeField>(
     let mut lookup_table = Vec::<Vec<CF>>::new();
     let mut cur = F::one();
     for _ in 0..max_nonnative_bits {
-        let repr = AllocatedNonNativeFieldVar::<F, CF>::get_limbs_representations(&cur, OptimizationType::Constraints)?;
+        let repr = AllocatedNonNativeFieldVar::<F, CF>::get_limbs_representations(
+            &cur,
+            OptimizationType::Constraints,
+        )?;
         lookup_table.push(repr);
         cur.double_in_place();
     }
 
-    let params = get_params(F::size_in_bits(), CF::size_in_bits(), OptimizationType::Constraints);
+    let params = get_params(
+        F::size_in_bits(),
+        CF::size_in_bits(),
+        OptimizationType::Constraints,
+    );
 
     let mut output = Vec::with_capacity(all_nonnative_bits_le.len());
     for nonnative_bits_le in all_nonnative_bits_le {
@@ -74,7 +83,7 @@ pub fn bits_le_to_nonnative<F: PrimeField, CF: PrimeField>(
 /// The interface for a cryptographic sponge.
 /// A sponge can `absorb` or take in inputs and later `squeeze` or output bytes or field elements.
 /// The outputs are dependent on previous `absorb` and `squeeze` calls.
-pub trait CryptographicSpongeVar<CF: PrimeField> {
+pub trait CryptographicSpongeVar<CF: PrimeField>: Clone {
     /// Initialize a new instance of the sponge.
     fn new(cs: ConstraintSystemRef<CF>) -> Self;
 
@@ -104,75 +113,25 @@ pub trait CryptographicSpongeVar<CF: PrimeField> {
         }
 
         let cs = self.cs();
-        let params = get_params(F::size_in_bits(), CF::size_in_bits(), OptimizationType::Constraints);
 
-        let mut max_nonnative_bits = 0usize;
-        let mut total_bits = 0usize;
-        for size in sizes {
-            let bits = size.num_bits::<F>();
-            if max_nonnative_bits < bits {
-                max_nonnative_bits = bits
-            }
-
-            total_bits += bits;
-        }
+        let mut total_bits = sizes.iter().fold(0usize, |total_bits, size| {
+            return total_bits + size.num_bits::<F>();
+        });
 
         let bits = self.squeeze_bits(total_bits)?;
 
-        let mut lookup_table = Vec::<Vec<CF>>::new();
-        let mut cur = F::one();
-        for _ in 0..max_nonnative_bits {
-            let repr = AllocatedNonNativeFieldVar::<F, CF>::get_limbs_representations(&cur, OptimizationType::Constraints)?;
-            lookup_table.push(repr);
-            cur.double_in_place();
-        }
-
-        let mut dest_gadgets = Vec::<NonNativeFieldVar<F, CF>>::new();
-        let mut dest_bits = Vec::<Vec<Boolean<CF>>>::new();
+        let mut dest_bits = Vec::<Vec<Boolean<CF>>>::with_capacity(sizes.len());
 
         let mut bits_window = bits.as_slice();
         for size in sizes {
             let num_bits = size.num_bits::<F>();
-
             let nonnative_bits_le = bits_window[..num_bits].to_vec();
             bits_window = &bits_window[num_bits..];
 
-            let mut val = vec![CF::zero(); params.num_limbs];
-            let mut lc = vec![LinearCombination::<CF>::zero(); params.num_limbs];
-
-            for (j, bit) in nonnative_bits_le.iter().enumerate() {
-                if bit.value().unwrap_or_default() {
-                    for (k, val) in val.iter_mut().enumerate().take(params.num_limbs) {
-                        *val += &lookup_table[j][k];
-                    }
-                }
-
-                #[allow(clippy::needless_range_loop)]
-                for k in 0..params.num_limbs {
-                    lc[k] = &lc[k] + bit.lc() * lookup_table[j][k];
-                }
-            }
-
-            let mut limbs = Vec::new();
-            for k in 0..params.num_limbs {
-                let gadget =
-                    AllocatedFp::new_witness(ark_relations::ns!(cs, "alloc"), || Ok(val[k]))
-                        .unwrap();
-                lc[k] = lc[k].clone() - (CF::one(), gadget.variable);
-                cs.enforce_constraint(lc!(), lc!(), lc[k].clone()).unwrap();
-                limbs.push(FpVar::<CF>::from(gadget));
-            }
-
             dest_bits.push(nonnative_bits_le);
-            dest_gadgets.push(NonNativeFieldVar::<F, CF>::Var(
-                AllocatedNonNativeFieldVar::<F, CF> {
-                    limbs,
-                    num_of_additions_over_normal_form: CF::zero(),
-                    is_in_the_normal_form: true,
-                    target_phantom: Default::default(),
-                },
-            ));
         }
+
+        let dest_gadgets = bits_le_to_nonnative(cs, dest_bits.iter())?;
 
         Ok((dest_gadgets, dest_bits))
     }
@@ -187,6 +146,8 @@ pub trait CryptographicSpongeVar<CF: PrimeField> {
     }
 }
 
+#[derive(Derivative)]
+#[derivative(Clone(bound = "D: DomainSeparator"))]
 pub struct DomainSeparatedSpongeVar<
     CF: PrimeField,
     S: CryptographicSpongeVar<CF>,

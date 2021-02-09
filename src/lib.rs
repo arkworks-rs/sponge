@@ -25,6 +25,9 @@ extern crate std;
 #[macro_use]
 extern crate ark_std as std;
 
+#[macro_use]
+extern crate derivative;
+
 use ark_ff::models::{
     Fp256, Fp256Parameters, Fp320, Fp320Parameters, Fp384, Fp384Parameters, Fp768, Fp768Parameters,
     Fp832, Fp832Parameters,
@@ -70,7 +73,7 @@ impl FieldElementSize {
 /// The interface for a cryptographic sponge.
 /// A sponge can `absorb` or take in inputs and later `squeeze` or output bytes or field elements.
 /// The outputs are dependent on previous `absorb` and `squeeze` calls.
-pub trait CryptographicSponge<CF: PrimeField> {
+pub trait CryptographicSponge<CF: PrimeField>: Clone {
     /// Initialize a new instance of the sponge.
     fn new() -> Self;
 
@@ -380,6 +383,8 @@ pub trait DomainSeparator {
     fn domain() -> Vec<u8>;
 }
 
+#[derive(Derivative)]
+#[derivative(Clone(bound = "D: DomainSeparator"))]
 pub struct DomainSeparatedSponge<CF: PrimeField, S: CryptographicSponge<CF>, D: DomainSeparator> {
     sponge: S,
     _field_phantom: PhantomData<CF>,
