@@ -68,6 +68,7 @@ pub fn bits_le_to_nonnative<'a, F: PrimeField, CF: PrimeField>(
 
         output.push(NonNativeFieldVar::<F, CF>::Var(
             AllocatedNonNativeFieldVar::<F, CF> {
+                cs: cs.clone(),
                 limbs,
                 num_of_additions_over_normal_form: CF::zero(),
                 is_in_the_normal_form: true,
