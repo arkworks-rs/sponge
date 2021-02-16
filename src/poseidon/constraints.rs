@@ -6,7 +6,7 @@
  */
 
 use crate::constraints::CryptographicSpongeVar;
-use crate::poseidon::PoseidonSpongeState;
+use crate::poseidon::{PoseidonSponge, PoseidonSpongeState};
 use crate::Vec;
 use ark_ff::{FpParameters, PrimeField};
 use ark_r1cs_std::fields::fp::FpVar;
@@ -171,7 +171,7 @@ impl<F: PrimeField> PoseidonSpongeVar<F> {
     }
 }
 
-impl<F: PrimeField> CryptographicSpongeVar<F> for PoseidonSpongeVar<F> {
+impl<F: PrimeField> CryptographicSpongeVar<F, PoseidonSponge<F>> for PoseidonSpongeVar<F> {
     #[tracing::instrument(target = "r1cs", skip(cs))]
     fn new(cs: ConstraintSystemRef<F>) -> Self {
         // Requires F to be Alt_Bn128Fr

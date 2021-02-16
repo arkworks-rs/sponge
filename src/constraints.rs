@@ -1,4 +1,4 @@
-use crate::{DomainSeparator, FieldElementSize};
+use crate::{CryptographicSponge, DomainSeparatedSponge, DomainSeparator, FieldElementSize};
 use ark_ff::{PrimeField, ToConstraintField};
 use ark_nonnative_field::params::{get_params, OptimizationType};
 use ark_nonnative_field::{AllocatedNonNativeFieldVar, NonNativeFieldVar};
@@ -80,11 +80,10 @@ pub fn bits_le_to_nonnative<'a, F: PrimeField, CF: PrimeField>(
     Ok(output)
 }
 
-// TODO: Work in progress. Redesign API later
 /// The interface for a cryptographic sponge.
 /// A sponge can `absorb` or take in inputs and later `squeeze` or output bytes or field elements.
 /// The outputs are dependent on previous `absorb` and `squeeze` calls.
-pub trait CryptographicSpongeVar<CF: PrimeField>: Clone {
+pub trait CryptographicSpongeVar<CF: PrimeField, S: CryptographicSponge<CF>>: Clone {
     /// Initialize a new instance of the sponge.
     fn new(cs: ConstraintSystemRef<CF>) -> Self;
 
@@ -151,20 +150,23 @@ pub trait CryptographicSpongeVar<CF: PrimeField>: Clone {
 #[derivative(Clone(bound = "D: DomainSeparator"))]
 pub struct DomainSeparatedSpongeVar<
     CF: PrimeField,
-    S: CryptographicSpongeVar<CF>,
+    S: CryptographicSponge<CF>,
+    SV: CryptographicSpongeVar<CF, S>,
     D: DomainSeparator,
 > {
-    sponge: S,
+    sponge: SV,
     domain_separated: bool,
 
     _affine_phantom: PhantomData<CF>,
+    _sponge_phantom: PhantomData<S>,
     _domain_separator_phantom: PhantomData<D>,
 }
 
-impl<CF, S, D> DomainSeparatedSpongeVar<CF, S, D>
+impl<CF, S, SV, D> DomainSeparatedSpongeVar<CF, S, SV, D>
 where
     CF: PrimeField,
-    S: CryptographicSpongeVar<CF>,
+    S: CryptographicSponge<CF>,
+    SV: CryptographicSpongeVar<CF, S>,
     D: DomainSeparator,
 {
     fn try_separate_domain(&mut self) -> Result<(), SynthesisError> {
@@ -183,17 +185,20 @@ where
     }
 }
 
-impl<CF, S, D> CryptographicSpongeVar<CF> for DomainSeparatedSpongeVar<CF, S, D>
+impl<CF, S, SV, D> CryptographicSpongeVar<CF, DomainSeparatedSponge<CF, S, D>>
+    for DomainSeparatedSpongeVar<CF, S, SV, D>
 where
     CF: PrimeField,
-    S: CryptographicSpongeVar<CF>,
+    S: CryptographicSponge<CF>,
+    SV: CryptographicSpongeVar<CF, S>,
     D: DomainSeparator,
 {
     fn new(cs: ConstraintSystemRef<CF>) -> Self {
         Self {
-            sponge: S::new(cs),
+            sponge: SV::new(cs),
             domain_separated: false,
             _affine_phantom: PhantomData,
+            _sponge_phantom: PhantomData,
             _domain_separator_phantom: PhantomData,
         }
     }
