@@ -28,6 +28,7 @@ extern crate ark_std as std;
 #[macro_use]
 extern crate derivative;
 
+pub use crate::absorbable::*;
 use ark_ff::models::{
     Fp256, Fp256Parameters, Fp320, Fp320Parameters, Fp384, Fp384Parameters, Fp768, Fp768Parameters,
     Fp832, Fp832Parameters,
@@ -40,15 +41,14 @@ use std::{vec, vec::Vec};
 #[cfg(feature = "r1cs")]
 pub mod constraints;
 
-//pub mod helpers;
+mod absorbable;
 
 // TODO: Add back
 //pub mod digest_sponge;
-//pub mod dummy;
 pub mod poseidon;
 
 /// An enum for specifying the output field element size.
-#[derive(Clone)]
+#[derive(Clone, Copy, Eq, PartialEq)]
 pub enum FieldElementSize {
     /// Sample field elements from the entire field.
     Full,
@@ -86,15 +86,25 @@ pub trait CryptographicSponge<CF: PrimeField>: Clone {
     /// Squeeze `num_bits` bits from the sponge.
     fn squeeze_bits(&mut self, num_bits: usize) -> Vec<bool>;
 
+    /// Squeeze `num_elements` field elements from the sponge.
+    fn squeeze_field_elements(&mut self, num_elements: usize) -> Vec<CF>;
+
     /// Squeeze `sizes.len()` field elements from the sponge, where the `i`-th element of
     /// the output has size `sizes[i]`.
-    fn squeeze_field_elements_with_sizes(&mut self, sizes: &[FieldElementSize]) -> Vec<CF>;
+    fn squeeze_field_elements_with_sizes(&mut self, sizes: &[FieldElementSize]) -> Vec<CF> {
+        let mut all_full_sizes = true;
+        for size in sizes {
+            if *size != FieldElementSize::Full {
+                all_full_sizes = false;
+                break;
+            }
+        }
 
-    /// Squeeze `num_elements` field elements from the sponge.
-    fn squeeze_field_elements(&mut self, num_elements: usize) -> Vec<CF> {
-        self.squeeze_field_elements_with_sizes(
-            vec![FieldElementSize::Full; num_elements].as_slice(),
-        )
+        if all_full_sizes {
+            self.squeeze_field_elements(sizes.len())
+        } else {
+            self.squeeze_nonnative_field_elements_with_sizes::<CF>(sizes)
+        }
     }
 
     /// Squeeze `sizes.len()` nonnative field elements from the sponge, where the `i`-th element of
@@ -118,33 +128,32 @@ pub trait CryptographicSponge<CF: PrimeField>: Clone {
             total_bits += bits;
         }
 
-        let mut lookup_table = Vec::<F>::new();
-        let mut cur = F::one();
-        for _ in 0..max_nonnative_bits {
-            lookup_table.push(cur);
-            cur.double_in_place();
-        }
-
         let bits = self.squeeze_bits(total_bits);
-        let mut nonnative_field_elements = Vec::with_capacity(sizes.len());
-
         let mut bits_window = bits.as_slice();
+
+        let mut output = Vec::with_capacity(sizes.len());
         for size in sizes {
             let num_bits = size.num_bits::<F>();
-            let nonnative_bits_le: &[bool] = &bits_window[..num_bits];
+            let mut nonnative_bits_le: Vec<bool> = bits_window[..num_bits].to_vec();
             bits_window = &bits_window[num_bits..];
 
-            let mut nonnative_field_element = F::zero();
-            for (i, bit) in nonnative_bits_le.iter().enumerate() {
-                if *bit {
-                    nonnative_field_element += &lookup_table[i];
-                }
-            }
+            let nonnative_bytes = nonnative_bits_le
+                .chunks(8)
+                .map(|bits| {
+                    let mut byte = 0u8;
+                    for (i, &bit) in bits.into_iter().enumerate() {
+                        if bit {
+                            byte += 1 << i;
+                        }
+                    }
+                    byte
+                })
+                .collect::<Vec<_>>();
 
-            nonnative_field_elements.push(nonnative_field_element);
+            output.push(F::from_random_bytes(nonnative_bytes.as_slice()).unwrap());
         }
 
-        nonnative_field_elements
+        output
     }
 
     /// Squeeze `num_elements` nonnative field elements from the sponge.
@@ -153,230 +162,6 @@ pub trait CryptographicSponge<CF: PrimeField>: Clone {
             vec![FieldElementSize::Full; num_elements].as_slice(),
         )
     }
-}
-
-/// An interface for objects that can be absorbed by a `CryptographicSponge`.
-pub trait Absorbable<F: PrimeField> {
-    /// Converts the object into a list of bytes that can be absorbed by a `CryptographicSponge`.
-    fn to_sponge_bytes(&self) -> Vec<u8>;
-
-    /// Converts the object into field elements that can be absorbed by a `CryptographicSponge`.
-    fn to_sponge_field_elements(&self) -> Vec<F>;
-}
-
-impl<F: PrimeField> Absorbable<F> for u8 {
-    fn to_sponge_bytes(&self) -> Vec<u8> {
-        vec![*self]
-    }
-
-    fn to_sponge_field_elements(&self) -> Vec<F> {
-        vec![F::from(*self)]
-    }
-}
-
-impl<F: PrimeField> Absorbable<F> for Vec<u8> {
-    fn to_sponge_bytes(&self) -> Vec<u8> {
-        self.clone()
-    }
-
-    fn to_sponge_field_elements(&self) -> Vec<F> {
-        self.as_slice().to_sponge_field_elements()
-    }
-}
-
-impl<F: PrimeField> Absorbable<F> for [u8] {
-    fn to_sponge_bytes(&self) -> Vec<u8> {
-        self.to_vec()
-    }
-
-    fn to_sponge_field_elements(&self) -> Vec<F> {
-        self.to_field_elements().unwrap()
-    }
-}
-
-impl<F: PrimeField> Absorbable<F> for &[u8] {
-    fn to_sponge_bytes(&self) -> Vec<u8> {
-        self.to_vec()
-    }
-
-    fn to_sponge_field_elements(&self) -> Vec<F> {
-        self.to_field_elements().unwrap()
-    }
-}
-
-macro_rules! impl_absorbable_field {
-    ($field:ident, $params:ident) => {
-        impl<P: $params> Absorbable<$field<P>> for $field<P> {
-            fn to_sponge_bytes(&self) -> Vec<u8> {
-                to_bytes![self].unwrap()
-            }
-
-            fn to_sponge_field_elements(&self) -> Vec<$field<P>> {
-                vec![*self]
-            }
-        }
-
-        impl<P: $params> Absorbable<$field<P>> for Vec<$field<P>> {
-            fn to_sponge_bytes(&self) -> Vec<u8> {
-                self.as_slice().to_sponge_bytes()
-            }
-
-            fn to_sponge_field_elements(&self) -> Vec<$field<P>> {
-                self.clone()
-            }
-        }
-
-        impl<P: $params> Absorbable<$field<P>> for [$field<P>] {
-            fn to_sponge_bytes(&self) -> Vec<u8> {
-                to_bytes![self].unwrap()
-            }
-
-            fn to_sponge_field_elements(&self) -> Vec<$field<P>> {
-                self.to_vec()
-            }
-        }
-    };
-}
-
-impl_absorbable_field!(Fp256, Fp256Parameters);
-impl_absorbable_field!(Fp320, Fp320Parameters);
-impl_absorbable_field!(Fp384, Fp384Parameters);
-impl_absorbable_field!(Fp768, Fp768Parameters);
-impl_absorbable_field!(Fp832, Fp832Parameters);
-
-macro_rules! impl_absorbable_unsigned {
-    ($t:ident) => {
-        impl<F: PrimeField> Absorbable<F> for $t {
-            fn to_sponge_bytes(&self) -> Vec<u8> {
-                self.to_le_bytes().to_vec()
-            }
-
-            fn to_sponge_field_elements(&self) -> Vec<F> {
-                vec![F::from(*self)]
-            }
-        }
-    };
-}
-
-impl_absorbable_unsigned!(u16);
-impl_absorbable_unsigned!(u32);
-impl_absorbable_unsigned!(u64);
-impl_absorbable_unsigned!(u128);
-
-macro_rules! impl_absorbable_signed {
-    ($signed:ident, $unsigned:ident) => {
-        impl<F: PrimeField> Absorbable<F> for $signed {
-            fn to_sponge_bytes(&self) -> Vec<u8> {
-                self.to_le_bytes().to_vec()
-            }
-
-            fn to_sponge_field_elements(&self) -> Vec<F> {
-                let mut elem = F::from(self.abs() as $unsigned);
-                if *self < 0 {
-                    elem = -elem;
-                }
-                vec![elem]
-            }
-        }
-    };
-}
-
-impl_absorbable_signed!(i8, u8);
-impl_absorbable_signed!(i16, u16);
-impl_absorbable_signed!(i32, u32);
-impl_absorbable_signed!(i64, u64);
-impl_absorbable_signed!(i128, u128);
-
-macro_rules! impl_absorbable_size {
-    ($t:ident) => {
-        impl<F: PrimeField> Absorbable<F> for $t {
-            fn to_sponge_bytes(&self) -> Vec<u8> {
-                Absorbable::<F>::to_sponge_bytes(&(*self as u64))
-            }
-
-            fn to_sponge_field_elements(&self) -> Vec<F> {
-                (*self as u64).to_sponge_field_elements()
-            }
-        }
-    };
-}
-
-macro_rules! impl_absorbable_size {
-    ($t:ident) => {
-        impl<F: PrimeField> Absorbable<F> for $t {
-            fn to_sponge_bytes(&self) -> Vec<u8> {
-                Absorbable::<F>::to_sponge_bytes(&(*self as u64))
-            }
-
-            fn to_sponge_field_elements(&self) -> Vec<F> {
-                (*self as u64).to_sponge_field_elements()
-            }
-        }
-    };
-}
-
-impl_absorbable_size!(usize);
-impl_absorbable_size!(isize);
-
-impl<F: PrimeField> Absorbable<F> for bool {
-    fn to_sponge_bytes(&self) -> Vec<u8> {
-        vec![(*self as u8)]
-    }
-
-    fn to_sponge_field_elements(&self) -> Vec<F> {
-        vec![F::from(*self)]
-    }
-}
-
-impl<F: PrimeField, A: Absorbable<F>> Absorbable<F> for Option<A> {
-    fn to_sponge_bytes(&self) -> Vec<u8> {
-        let mut output = vec![self.is_some() as u8];
-        if let Some(absorbable) = self {
-            output.extend(absorbable.to_sponge_bytes());
-        };
-        output
-    }
-
-    fn to_sponge_field_elements(&self) -> Vec<F> {
-        let mut output = vec![F::from(self.is_some())];
-        if let Some(absorbable) = self {
-            output.extend(absorbable.to_sponge_field_elements());
-        };
-        output
-    }
-}
-
-impl<F: PrimeField, A: Absorbable<F>> Absorbable<F> for &A {
-    fn to_sponge_bytes(&self) -> Vec<u8> {
-        (*self).to_sponge_bytes()
-    }
-
-    fn to_sponge_field_elements(&self) -> Vec<F> {
-        (*self).to_sponge_field_elements()
-    }
-}
-
-/// Individually absorbs each element in a comma-separated list of absorbables into a sponge.
-/// Format is `absorb!(s, a_0, a_1, ..., a_n)`, where `s` is a mutable reference to a sponge
-/// and each `a_i` implements `Absorbable`.
-#[macro_export]
-macro_rules! absorb {
-    ($sponge:expr, $($absorbable:expr),+ ) => {
-        $(
-            CryptographicSponge::absorb($sponge, &$absorbable);
-        )+
-    };
-}
-
-#[macro_export]
-macro_rules! absorb_iter {
-    ($sponge:expr, $($absorbable:expr),+ ) => {
-        $(
-            for ab in &$absorbable {
-                CryptographicSponge::absorb($sponge, &ab);
-            }
-        )+
-    };
 }
 
 pub trait DomainSeparator {
@@ -417,12 +202,12 @@ impl<CF: PrimeField, S: CryptographicSponge<CF>, D: DomainSeparator> Cryptograph
         self.sponge.squeeze_bits(num_bits)
     }
 
-    fn squeeze_field_elements_with_sizes(&mut self, sizes: &[FieldElementSize]) -> Vec<CF> {
-        self.sponge.squeeze_field_elements_with_sizes(sizes)
-    }
-
     fn squeeze_field_elements(&mut self, num_elements: usize) -> Vec<CF> {
         self.sponge.squeeze_field_elements(num_elements)
+    }
+
+    fn squeeze_field_elements_with_sizes(&mut self, sizes: &[FieldElementSize]) -> Vec<CF> {
+        self.sponge.squeeze_field_elements_with_sizes(sizes)
     }
 
     fn squeeze_nonnative_field_elements_with_sizes<F: PrimeField>(

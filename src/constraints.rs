@@ -257,6 +257,13 @@ pub mod tests {
     type CF = Fq;
 
     #[test]
+    fn test_a() {
+        let a = vec![0u8, 5, 6, 2, 3, 7, 2];
+        let mut s = PoseidonSponge::<CF>::new();
+        s.absorb(&a);
+    }
+
+    #[test]
     fn test_squeeze_nonnative_field_elements() {
         let cs = ConstraintSystem::<CF>::new_ref();
         let mut s = PoseidonSponge::<CF>::new();
