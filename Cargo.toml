@@ -5,6 +5,7 @@ authors = []
 edition = "2018"
 
 [dependencies]
+ark-ec = { git = "https://github.com/arkworks-rs/algebra/", default_features = false }
 ark-ff = { git = "https://github.com/arkworks-rs/algebra/", default_features = false }
 ark-std = { git = "https://github.com/arkworks-rs/utils", default-features = false }
 derivative = { version = "2.1.1", features = [ "use_core" ] }

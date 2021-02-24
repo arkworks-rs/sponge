@@ -1,8 +1,11 @@
-use ark_ff::{PrimeField, ToConstraintField, to_bytes};
+use ark_ec::models::short_weierstrass_jacobian::GroupAffine as SWAffine;
+use ark_ec::models::twisted_edwards_extended::GroupAffine as TEAffine;
+use ark_ec::models::{SWModelParameters, TEModelParameters};
 use ark_ff::models::{
     Fp256, Fp256Parameters, Fp320, Fp320Parameters, Fp384, Fp384Parameters, Fp768, Fp768Parameters,
     Fp832, Fp832Parameters,
 };
+use ark_ff::{to_bytes, PrimeField, ToConstraintField};
 
 /// An interface for objects that can be absorbed by a `CryptographicSponge`.
 pub trait Absorbable<F: PrimeField> {
@@ -150,6 +153,26 @@ macro_rules! impl_absorbable_size {
 impl_absorbable_size!(usize);
 impl_absorbable_size!(isize);
 
+macro_rules! impl_absorbable_group {
+    ($group:ident, $params:ident) => {
+        impl<P: $params, F: PrimeField> Absorbable<F> for $group<P>
+        where
+            P::BaseField: ToConstraintField<F>,
+         {
+            fn to_sponge_bytes(&self) -> Vec<u8> {
+                Absorbable::<F>::to_sponge_bytes(&to_bytes!(self).unwrap())
+            }
+
+            fn to_sponge_field_elements(&self) -> Vec<F> {
+                self.to_field_elements().unwrap()
+            }
+        }
+    };
+}
+
+impl_absorbable_group!(TEAffine, TEModelParameters);
+impl_absorbable_group!(SWAffine, SWModelParameters);
+
 impl<F: PrimeField> Absorbable<F> for bool {
     fn to_sponge_bytes(&self) -> Vec<u8> {
         vec![(*self as u8)]
@@ -217,5 +240,31 @@ macro_rules! absorb {
         $(
             CryptographicSponge::absorb($sponge, &$absorbable);
         )+
+    };
+}
+
+#[macro_export]
+macro_rules! collect_sponge_bytes {
+    ($type:ident, $head:expr $(, $tail:expr)* ) => {
+        {
+            let mut output = Absorbable::<$type>::to_sponge_bytes(&$head);
+            $(
+                output.append(&mut Absorbable::<$type>::to_sponge_bytes(&$tail));
+            )*
+            output
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! collect_sponge_field_elements {
+    ($type:ident, $head:expr $(, $tail:expr)* ) => {
+        {
+            let mut output = Absorbable::<$type>::to_sponge_field_elements(&$head);
+            $(
+                output.append(&mut Absorbable::<$type>::to_sponge_field_elements(&$tail));
+            )*
+            output
+        }
     };
 }

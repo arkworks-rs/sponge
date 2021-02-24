@@ -242,12 +242,16 @@ where
 
 #[cfg(test)]
 pub mod tests {
+    use crate::collect_sponge_bytes;
+    use crate::collect_sponge_field_elements;
     use crate::constraints::CryptographicSpongeVar;
     use crate::poseidon::constraints::PoseidonSpongeVar;
     use crate::poseidon::PoseidonSponge;
+    use crate::Absorbable;
     use crate::{CryptographicSponge, FieldElementSize};
     use ark_ed_on_bls12_381::{Fq, Fr};
     use ark_ff::{One, ToConstraintField};
+    use ark_ff::{PrimeField, Zero};
     use ark_r1cs_std::fields::fp::FpVar;
     use ark_r1cs_std::fields::FieldVar;
     use ark_r1cs_std::R1CSVar;
@@ -256,6 +260,37 @@ pub mod tests {
     type F = Fr;
     type CF = Fq;
 
+    pub struct Test<F: PrimeField> {
+        a: Vec<u8>,
+        b: u128,
+        c: F,
+    }
+
+    impl<F: PrimeField> Absorbable<F> for Test<F>
+    where
+        F: Absorbable<F>,
+    {
+        fn to_sponge_bytes(&self) -> Vec<u8> {
+            collect_sponge_bytes!(F, self.a, self.b, self.c)
+        }
+
+        fn to_sponge_field_elements(&self) -> Vec<F> {
+            collect_sponge_field_elements!(F, self.a, self.b, self.c)
+        }
+    }
+
+    #[test]
+    fn test_ae() {
+        let a = Test {
+            a: vec![],
+            b: 0,
+            c: Fr::zero(),
+        };
+        let mut s = PoseidonSponge::<Fr>::new();
+        s.absorb(&a);
+    }
+
+    /*
     #[test]
     fn test_a() {
         let a = vec![0u8, 5, 6, 2, 3, 7, 2];
@@ -300,5 +335,5 @@ pub mod tests {
         println!("{:?}", out.0.value().unwrap());
 
          */
-    }
+    }*/
 }
