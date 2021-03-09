@@ -1,10 +1,3 @@
-/*
- * credit:
- *      This implementation of Poseidon is entirely from Fractal's implementation
- *      ([COS20]: https://eprint.iacr.org/2019/1076)
- *      with small syntax changes.
- */
-
 use crate::{Absorbable, CryptographicSponge, FieldElementSize, Vec};
 use ark_ff::{BigInteger, FpParameters, PrimeField};
 use rand_core::SeedableRng;
@@ -21,6 +14,11 @@ enum PoseidonSpongeState {
 
 #[derive(Clone)]
 /// the sponge for Poseidon
+///
+/// This implementation of Poseidon is entirely from Fractal's implementation in [COS20][cos]
+/// with small syntax changes.
+///
+/// [cos]: https://eprint.iacr.org/2019/1076
 pub struct PoseidonSponge<F: PrimeField> {
     /// number of rounds in a full-round operation
     full_rounds: u32,

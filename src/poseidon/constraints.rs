@@ -5,6 +5,7 @@
  *      with small syntax changes.
  */
 
+use crate::constraints::AbsorbableGadget;
 use crate::constraints::CryptographicSpongeVar;
 use crate::poseidon::{PoseidonSponge, PoseidonSpongeState};
 use crate::Vec;
@@ -226,7 +227,8 @@ impl<F: PrimeField> CryptographicSpongeVar<F, PoseidonSponge<F>> for PoseidonSpo
     }
 
     #[tracing::instrument(target = "r1cs", skip(self, input))]
-    fn absorb(&mut self, input: &[FpVar<F>]) -> Result<(), SynthesisError> {
+    fn absorb(&mut self, input: &impl AbsorbableGadget<F>) -> Result<(), SynthesisError> {
+        let input = input.to_sponge_field_elements()?;
         if input.is_empty() {
             return Ok(());
         }
@@ -238,13 +240,13 @@ impl<F: PrimeField> CryptographicSpongeVar<F, PoseidonSponge<F>> for PoseidonSpo
                     self.permute()?;
                     absorb_index = 0;
                 }
-                self.absorb_internal(absorb_index, input)?;
+                self.absorb_internal(absorb_index, input.as_slice())?;
             }
             PoseidonSpongeState::Squeezing {
                 next_squeeze_index: _,
             } => {
                 self.permute()?;
-                self.absorb_internal(0, input)?;
+                self.absorb_internal(0, input.as_slice())?;
             }
         };
 

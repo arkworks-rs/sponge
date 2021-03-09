@@ -28,7 +28,6 @@ extern crate ark_std as std;
 #[macro_use]
 extern crate derivative;
 
-pub use crate::absorbable::*;
 use ark_ff::models::{
     Fp256, Fp256Parameters, Fp320, Fp320Parameters, Fp384, Fp384Parameters, Fp768, Fp768Parameters,
     Fp832, Fp832Parameters,
@@ -42,10 +41,11 @@ use std::{vec, vec::Vec};
 pub mod constraints;
 
 mod absorbable;
+pub use absorbable::*;
 
-// TODO: Add back
-//pub mod digest_sponge;
 pub mod poseidon;
+
+pub mod domain_separated;
 
 /// An enum for specifying the output field element size.
 #[derive(Clone, Copy, Eq, PartialEq)]
@@ -53,16 +53,13 @@ pub enum FieldElementSize {
     /// Sample field elements from the entire field.
     Full,
 
-    /// Sample field elements from a subset of the field.
-    Truncated {
-        /// The maximum size of the subset is 2^num_bits.
-        num_bits: usize,
-    },
+    /// Sample field elements from a subset of the field, specified by the maximum number of bits.
+    Truncated(usize),
 }
 
 impl FieldElementSize {
-    pub fn num_bits<F: PrimeField>(&self) -> usize {
-        if let FieldElementSize::Truncated { num_bits } = self {
+    pub(crate) fn num_bits<F: PrimeField>(&self) -> usize {
+        if let FieldElementSize::Truncated(num_bits) = self {
             *num_bits.min(&(F::Params::CAPACITY as usize))
         } else {
             F::Params::CAPACITY as usize
@@ -162,63 +159,118 @@ pub trait CryptographicSponge<CF: PrimeField>: Clone {
             vec![FieldElementSize::Full; num_elements].as_slice(),
         )
     }
+
+    /// Applies domain separation to a sponge
+    fn fork(&mut self, domain: &[u8]) -> &mut Self {
+        let mut input = Absorbable::<CF>::to_sponge_bytes(&domain.len());
+        input.extend_from_slice(domain);
+        self.absorb(&input);
+        self
+    }
+
+    /// Applies domain separation to a new sponge.
+    fn new_fork(&self, domain: &[u8]) -> Self {
+        let mut new_sponge = self.clone();
+        new_sponge.fork(domain);
+        new_sponge
+    }
 }
 
-pub trait DomainSeparator {
-    fn domain() -> Vec<u8>;
-}
+#[cfg(test)]
+pub mod tests {
+    use crate::collect_sponge_bytes;
+    use crate::collect_sponge_field_elements;
+    use crate::constraints::CryptographicSpongeVar;
+    use crate::poseidon::constraints::PoseidonSpongeVar;
+    use crate::poseidon::PoseidonSponge;
+    use crate::Absorbable;
+    use crate::{CryptographicSponge, FieldElementSize};
+    use ark_ed_on_bls12_381::{Fq, Fr};
+    use ark_ff::{One, ToConstraintField};
+    use ark_ff::{PrimeField, Zero};
+    use ark_r1cs_std::fields::fp::FpVar;
+    use ark_r1cs_std::fields::FieldVar;
+    use ark_r1cs_std::R1CSVar;
+    use ark_relations::r1cs::ConstraintSystem;
 
-#[derive(Derivative)]
-#[derivative(Clone(bound = "D: DomainSeparator"))]
-pub struct DomainSeparatedSponge<CF: PrimeField, S: CryptographicSponge<CF>, D: DomainSeparator> {
-    sponge: S,
-    _field_phantom: PhantomData<CF>,
-    _domain_phantom: PhantomData<D>,
-}
+    type F = Fr;
+    type CF = Fq;
 
-impl<CF: PrimeField, S: CryptographicSponge<CF>, D: DomainSeparator> CryptographicSponge<CF>
-    for DomainSeparatedSponge<CF, S, D>
-{
-    fn new() -> Self {
-        let mut sponge = S::new();
-        sponge.absorb(&D::domain());
+    pub struct Test<F: PrimeField> {
+        a: Vec<u8>,
+        b: u128,
+        c: F,
+    }
 
-        Self {
-            sponge,
-            _field_phantom: PhantomData,
-            _domain_phantom: PhantomData,
+    impl<F: PrimeField> Absorbable<F> for Test<F>
+    where
+        F: Absorbable<F>,
+    {
+        fn to_sponge_bytes(&self) -> Vec<u8> {
+            collect_sponge_bytes!(F, self.a, self.b, self.c)
+        }
+
+        fn to_sponge_field_elements(&self) -> Vec<F> {
+            collect_sponge_field_elements!(F, self.a, self.b, self.c)
         }
     }
 
-    fn absorb(&mut self, input: &impl Absorbable<CF>) {
-        self.sponge.absorb(input);
+    #[test]
+    fn test_ae() {
+        let a = Test {
+            a: vec![],
+            b: 0,
+            c: Fr::zero(),
+        };
+        let mut s = PoseidonSponge::<Fr>::new();
+        s.absorb(&a);
+        s.absorb(vec![0u8].as_slice())
     }
 
-    fn squeeze_bytes(&mut self, num_bytes: usize) -> Vec<u8> {
-        self.sponge.squeeze_bytes(num_bytes)
+    /*
+    #[test]
+    fn test_a() {
+        let a = vec![0u8, 5, 6, 2, 3, 7, 2];
+        let mut s = PoseidonSponge::<CF>::new();
+        s.absorb(&a);
     }
 
-    fn squeeze_bits(&mut self, num_bits: usize) -> Vec<bool> {
-        self.sponge.squeeze_bits(num_bits)
-    }
+    #[test]
+    fn test_squeeze_nonnative_field_elements() {
+        let cs = ConstraintSystem::<CF>::new_ref();
+        let mut s = PoseidonSponge::<CF>::new();
+        s.absorb(&CF::one());
 
-    fn squeeze_field_elements(&mut self, num_elements: usize) -> Vec<CF> {
-        self.sponge.squeeze_field_elements(num_elements)
-    }
+        let mut s_var = PoseidonSpongeVar::<CF>::new(cs.clone());
+        s_var.absorb(&[FpVar::<CF>::one()]);
 
-    fn squeeze_field_elements_with_sizes(&mut self, sizes: &[FieldElementSize]) -> Vec<CF> {
-        self.sponge.squeeze_field_elements_with_sizes(sizes)
-    }
+        let out: Vec<F> = s.squeeze_nonnative_field_elements_with_sizes::<F>(&[
+            FieldElementSize::Truncated { num_bits: 128 },
+            FieldElementSize::Truncated { num_bits: 180 },
+            FieldElementSize::Full,
+            FieldElementSize::Truncated { num_bits: 128 },
+        ]);
+        let out_var = s_var
+            .squeeze_nonnative_field_elements_with_sizes::<F>(&[
+                FieldElementSize::Truncated { num_bits: 128 },
+                FieldElementSize::Truncated { num_bits: 180 },
+                FieldElementSize::Full,
+                FieldElementSize::Truncated { num_bits: 128 },
+            ])
+            .unwrap();
 
-    fn squeeze_nonnative_field_elements_with_sizes<F: PrimeField>(
-        &mut self,
-        sizes: &[FieldElementSize],
-    ) -> Vec<F> {
-        self.sponge
-            .squeeze_nonnative_field_elements_with_sizes(sizes)
-    }
+        println!("{:?}", out);
+        println!("{:?}", out_var.0.value().unwrap());
 
-    fn squeeze_nonnative_field_elements<F: PrimeField>(&mut self, num_elements: usize) -> Vec<F> {
-        self.sponge.squeeze_nonnative_field_elements(num_elements)
-    }
+        /*
+        let out = s
+            .squeeze_nonnative_field_elements::<F>(&[
+                FieldElementSize::Truncated { num_bits: 128 },
+                FieldElementSize::Truncated { num_bits: 128 },
+            ])
+            .unwrap();
+        println!("{:?}", out.0.value().unwrap());
+
+         */
+    }*/
 }
