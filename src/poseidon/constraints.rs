@@ -1,10 +1,3 @@
-/*
- * credit:
- *      This implementation of Poseidon is entirely from Fractal's implementation
- *      ([COS20]: https://eprint.iacr.org/2019/1076)
- *      with small syntax changes.
- */
-
 use crate::constraints::AbsorbableGadget;
 use crate::constraints::CryptographicSpongeVar;
 use crate::poseidon::{PoseidonSponge, PoseidonSpongeState};
@@ -17,6 +10,11 @@ use rand_core::SeedableRng;
 
 #[derive(Clone)]
 /// the gadget for Poseidon sponge
+///
+/// This implementation of Poseidon is entirely from Fractal's implementation in [COS20][cos]
+/// with small syntax changes.
+///
+/// [cos]: https://eprint.iacr.org/2019/1076
 pub struct PoseidonSpongeVar<F: PrimeField> {
     /// constraint system
     pub cs: ConstraintSystemRef<F>,
@@ -27,7 +25,7 @@ pub struct PoseidonSpongeVar<F: PrimeField> {
     /// Exponent used in S-boxes
     pub alpha: u64,
     /// Additive Round keys. These are added before each MDS matrix application to make it an affine shift.
-    /// They are indexed by ark[round_num][state_element_index]
+    /// They are indexed by `ark[round_num][state_element_index]`
     pub ark: Vec<Vec<F>>,
     /// Maximally Distance Separating Matrix.
     pub mds: Vec<Vec<F>>,

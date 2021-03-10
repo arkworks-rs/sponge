@@ -2,12 +2,17 @@ use crate::{Absorbable, CryptographicSponge, FieldElementSize};
 use ark_ff::PrimeField;
 use std::marker::PhantomData;
 
+/// The constraints version of the [`DomainSeparatedSponge`].
 pub mod constraints;
 
+/// Specifies the domain of a [`DomainSeparatedSponge`].
 pub trait DomainSeparator {
+    /// Returns the domain
     fn domain() -> Vec<u8>;
 }
 
+/// A sponge that offers backwards compatibility for implementations that do not accept sponge
+/// objects but require domain separation. Operates in the same way as fork.
 #[derive(Derivative)]
 #[derivative(Clone(bound = "D: DomainSeparator"))]
 pub struct DomainSeparatedSponge<CF: PrimeField, S: CryptographicSponge<CF>, D: DomainSeparator> {

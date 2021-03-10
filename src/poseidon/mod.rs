@@ -27,7 +27,7 @@ pub struct PoseidonSponge<F: PrimeField> {
     /// Exponent used in S-boxes
     alpha: u64,
     /// Additive Round keys. These are added before each MDS matrix application to make it an affine shift.
-    /// They are indexed by ark[round_num][state_element_index]
+    /// They are indexed by `ark[round_num][state_element_index]`
     ark: Vec<Vec<F>>,
     /// Maximally Distance Separating Matrix.
     mds: Vec<Vec<F>>,

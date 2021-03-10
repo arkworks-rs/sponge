@@ -15,6 +15,7 @@ pub trait Absorbable<F: PrimeField> {
     /// Converts the object into field elements that can be absorbed by a `CryptographicSponge`.
     fn to_sponge_field_elements(&self) -> Vec<F>;
 
+    /// Specifies the conversion into a list of bytes for a batch.
     fn batch_to_sponge_bytes(batch: &[Self]) -> Vec<u8>
     where
         Self: Sized,
@@ -27,6 +28,7 @@ pub trait Absorbable<F: PrimeField> {
         output
     }
 
+    /// Specifies the conversion into a list of field elements for a batch.
     fn batch_to_sponge_field_elements(batch: &[Self]) -> Vec<F>
     where
         Self: Sized,
@@ -248,6 +250,7 @@ macro_rules! absorb {
     };
 }
 
+/// Quickly convert a list of different [`Absorbable`]s into sponge bytes.
 #[macro_export]
 macro_rules! collect_sponge_bytes {
     ($type:ident, $head:expr $(, $tail:expr)* ) => {
@@ -261,6 +264,7 @@ macro_rules! collect_sponge_bytes {
     };
 }
 
+/// Quickly convert a list of different [`Absorbable`]s into sponge field elements.
 #[macro_export]
 macro_rules! collect_sponge_field_elements {
     ($head:expr $(, $tail:expr)* ) => {

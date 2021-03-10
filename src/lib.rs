@@ -37,14 +37,23 @@ use std::cmp::Ordering;
 use std::marker::PhantomData;
 use std::{vec, vec::Vec};
 
+/// Infrastructure for the constraints counterparts.
 #[cfg(feature = "r1cs")]
 pub mod constraints;
 
 mod absorbable;
 pub use absorbable::*;
 
+/// The sponge for Poseidon
+///
+/// This implementation of Poseidon is entirely from Fractal's implementation in [COS20][cos]
+/// with small syntax changes.
+///
+/// [cos]: https://eprint.iacr.org/2019/1076
 pub mod poseidon;
 
+/// A sponge that offers backwards compatibility for implementations that do not accept sponge
+/// objects but require domain separation. Operates in the same way as fork.
 pub mod domain_separated;
 
 /// An enum for specifying the output field element size.

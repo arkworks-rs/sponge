@@ -15,6 +15,7 @@ use std::marker::PhantomData;
 mod absorbable;
 pub use absorbable::*;
 
+/// Converts little-endian bits to a list of nonnative elements.
 pub fn bits_le_to_nonnative<'a, F: PrimeField, CF: PrimeField>(
     cs: ConstraintSystemRef<CF>,
     all_nonnative_bits_le: impl IntoIterator<Item = &'a Vec<Boolean<CF>>>,
