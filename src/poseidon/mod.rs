@@ -1,4 +1,4 @@
-use crate::{Absorbable, CryptographicSponge, FieldElementSize, Vec};
+use crate::{Absorbable, CryptographicSponge, Vec};
 use ark_ff::{BigInteger, FpParameters, PrimeField};
 use rand_core::SeedableRng;
 
@@ -249,10 +249,6 @@ impl<F: PrimeField> CryptographicSponge<F> for PoseidonSponge<F> {
 
         bits.truncate(num_bits);
         bits
-    }
-
-    fn squeeze_field_elements_with_sizes(&mut self, sizes: &[FieldElementSize]) -> Vec<F> {
-        unimplemented!()
     }
 
     fn squeeze_field_elements(&mut self, num_elements: usize) -> Vec<F> {

@@ -1,5 +1,5 @@
 use crate::{Absorbable, CryptographicSponge, FieldElementSize};
-use ark_ff::{PrimeField, ToConstraintField};
+use ark_ff::PrimeField;
 use ark_nonnative_field::params::{get_params, OptimizationType};
 use ark_nonnative_field::{AllocatedNonNativeFieldVar, NonNativeFieldVar};
 use ark_r1cs_std::alloc::AllocVar;
@@ -10,7 +10,6 @@ use ark_r1cs_std::R1CSVar;
 use ark_relations::lc;
 use ark_relations::r1cs::{ConstraintSystemRef, LinearCombination, SynthesisError};
 use ark_std::vec::Vec;
-use std::marker::PhantomData;
 
 mod absorbable;
 pub use absorbable::*;
@@ -22,7 +21,7 @@ pub fn bits_le_to_nonnative<'a, F: PrimeField, CF: PrimeField>(
 ) -> Result<Vec<NonNativeFieldVar<F, CF>>, SynthesisError> {
     let all_nonnative_bits_le = all_nonnative_bits_le.into_iter().collect::<Vec<_>>();
 
-    let mut max_nonnative_bits = all_nonnative_bits_le
+    let max_nonnative_bits = all_nonnative_bits_le
         .iter()
         .fold(0usize, |max_num_bits, bits| max_num_bits.max(bits.len()));
 
@@ -121,7 +120,7 @@ pub trait CryptographicSpongeVar<CF: PrimeField, S: CryptographicSponge<CF>>: Cl
 
         let cs = self.cs();
 
-        let mut total_bits = sizes.iter().fold(0usize, |total_bits, size| {
+        let total_bits = sizes.iter().fold(0usize, |total_bits, size| {
             return total_bits + size.num_bits::<F>();
         });
 

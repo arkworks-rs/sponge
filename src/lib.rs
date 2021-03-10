@@ -17,6 +17,9 @@
 )]
 #![forbid(unsafe_code)]
 
+use ark_ff::{FpParameters, PrimeField};
+use std::{vec, vec::Vec};
+
 #[cfg(feature = "std")]
 #[macro_use]
 extern crate std;
@@ -27,15 +30,6 @@ extern crate ark_std as std;
 
 #[macro_use]
 extern crate derivative;
-
-use ark_ff::models::{
-    Fp256, Fp256Parameters, Fp320, Fp320Parameters, Fp384, Fp384Parameters, Fp768, Fp768Parameters,
-    Fp832, Fp832Parameters,
-};
-use ark_ff::{to_bytes, FpParameters, PrimeField, ToConstraintField};
-use std::cmp::Ordering;
-use std::marker::PhantomData;
-use std::{vec, vec::Vec};
 
 /// Infrastructure for the constraints counterparts.
 #[cfg(feature = "r1cs")]
@@ -140,7 +134,7 @@ pub trait CryptographicSponge<CF: PrimeField>: Clone {
         let mut output = Vec::with_capacity(sizes.len());
         for size in sizes {
             let num_bits = size.num_bits::<F>();
-            let mut nonnative_bits_le: Vec<bool> = bits_window[..num_bits].to_vec();
+            let nonnative_bits_le: Vec<bool> = bits_window[..num_bits].to_vec();
             bits_window = &bits_window[num_bits..];
 
             let nonnative_bytes = nonnative_bits_le
@@ -183,103 +177,4 @@ pub trait CryptographicSponge<CF: PrimeField>: Clone {
         new_sponge.fork(domain);
         new_sponge
     }
-}
-
-#[cfg(test)]
-pub mod tests {
-    use crate::collect_sponge_bytes;
-    use crate::collect_sponge_field_elements;
-    use crate::constraints::CryptographicSpongeVar;
-    use crate::poseidon::constraints::PoseidonSpongeVar;
-    use crate::poseidon::PoseidonSponge;
-    use crate::Absorbable;
-    use crate::{CryptographicSponge, FieldElementSize};
-    use ark_ed_on_bls12_381::{Fq, Fr};
-    use ark_ff::{One, ToConstraintField};
-    use ark_ff::{PrimeField, Zero};
-    use ark_r1cs_std::fields::fp::FpVar;
-    use ark_r1cs_std::fields::FieldVar;
-    use ark_r1cs_std::R1CSVar;
-    use ark_relations::r1cs::ConstraintSystem;
-
-    type F = Fr;
-    type CF = Fq;
-
-    pub struct Test<F: PrimeField> {
-        a: Vec<u8>,
-        b: u128,
-        c: F,
-    }
-
-    impl<F: PrimeField> Absorbable<F> for Test<F>
-    where
-        F: Absorbable<F>,
-    {
-        fn to_sponge_bytes(&self) -> Vec<u8> {
-            collect_sponge_bytes!(F, self.a, self.b, self.c)
-        }
-
-        fn to_sponge_field_elements(&self) -> Vec<F> {
-            collect_sponge_field_elements!(F, self.a, self.b, self.c)
-        }
-    }
-
-    #[test]
-    fn test_ae() {
-        let a = Test {
-            a: vec![],
-            b: 0,
-            c: Fr::zero(),
-        };
-        let mut s = PoseidonSponge::<Fr>::new();
-        s.absorb(&a);
-        s.absorb(vec![0u8].as_slice())
-    }
-
-    /*
-    #[test]
-    fn test_a() {
-        let a = vec![0u8, 5, 6, 2, 3, 7, 2];
-        let mut s = PoseidonSponge::<CF>::new();
-        s.absorb(&a);
-    }
-
-    #[test]
-    fn test_squeeze_nonnative_field_elements() {
-        let cs = ConstraintSystem::<CF>::new_ref();
-        let mut s = PoseidonSponge::<CF>::new();
-        s.absorb(&CF::one());
-
-        let mut s_var = PoseidonSpongeVar::<CF>::new(cs.clone());
-        s_var.absorb(&[FpVar::<CF>::one()]);
-
-        let out: Vec<F> = s.squeeze_nonnative_field_elements_with_sizes::<F>(&[
-            FieldElementSize::Truncated { num_bits: 128 },
-            FieldElementSize::Truncated { num_bits: 180 },
-            FieldElementSize::Full,
-            FieldElementSize::Truncated { num_bits: 128 },
-        ]);
-        let out_var = s_var
-            .squeeze_nonnative_field_elements_with_sizes::<F>(&[
-                FieldElementSize::Truncated { num_bits: 128 },
-                FieldElementSize::Truncated { num_bits: 180 },
-                FieldElementSize::Full,
-                FieldElementSize::Truncated { num_bits: 128 },
-            ])
-            .unwrap();
-
-        println!("{:?}", out);
-        println!("{:?}", out_var.0.value().unwrap());
-
-        /*
-        let out = s
-            .squeeze_nonnative_field_elements::<F>(&[
-                FieldElementSize::Truncated { num_bits: 128 },
-                FieldElementSize::Truncated { num_bits: 128 },
-            ])
-            .unwrap();
-        println!("{:?}", out.0.value().unwrap());
-
-         */
-    }*/
 }
