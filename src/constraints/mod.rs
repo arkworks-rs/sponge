@@ -20,10 +20,14 @@ pub fn bits_le_to_nonnative<'a, F: PrimeField, CF: PrimeField>(
     all_nonnative_bits_le: impl IntoIterator<Item = &'a Vec<Boolean<CF>>>,
 ) -> Result<Vec<NonNativeFieldVar<F, CF>>, SynthesisError> {
     let all_nonnative_bits_le = all_nonnative_bits_le.into_iter().collect::<Vec<_>>();
+    if all_nonnative_bits_le.is_empty() {
+        return Ok(Vec::new());
+    }
 
-    let max_nonnative_bits = all_nonnative_bits_le
-        .iter()
-        .fold(0usize, |max_num_bits, bits| max_num_bits.max(bits.len()));
+    let mut max_nonnative_bits = 0usize;
+    for bits in &all_nonnative_bits_le {
+        max_nonnative_bits = max_nonnative_bits.max(bits.len());
+    }
 
     let mut lookup_table = Vec::<Vec<CF>>::new();
     let mut cur = F::one();
@@ -120,9 +124,10 @@ pub trait CryptographicSpongeVar<CF: PrimeField, S: CryptographicSponge<CF>>: Cl
 
         let cs = self.cs();
 
-        let total_bits = sizes.iter().fold(0usize, |total_bits, size| {
-            return total_bits + size.num_bits::<F>();
-        });
+        let mut total_bits = 0usize;
+        for size in sizes {
+            total_bits += size.num_bits::<F>();
+        }
 
         let bits = self.squeeze_bits(total_bits)?;
 
