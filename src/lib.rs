@@ -107,15 +107,9 @@ pub trait CryptographicSponge<CF: PrimeField>: Clone {
             return Vec::new();
         }
 
-        let mut max_nonnative_bits = 0usize;
         let mut total_bits = 0usize;
         for size in sizes {
-            let bits = size.num_bits::<F>();
-            if max_nonnative_bits < bits {
-                max_nonnative_bits = bits
-            }
-
-            total_bits += bits;
+            total_bits += size.num_bits::<F>();
         }
 
         let bits = self.squeeze_bits(total_bits);
