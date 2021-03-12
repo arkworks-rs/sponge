@@ -1,12 +1,12 @@
 use crate::constraints::AbsorbableGadget;
 use crate::constraints::CryptographicSpongeVar;
 use crate::poseidon::{PoseidonSponge, PoseidonSpongeState};
-use crate::Vec;
 use ark_ff::{FpParameters, PrimeField};
 use ark_r1cs_std::fields::fp::FpVar;
 use ark_r1cs_std::prelude::*;
 use ark_relations::r1cs::{ConstraintSystemRef, SynthesisError};
 use rand_core::SeedableRng;
+use ark_std::vec::Vec;
 
 #[derive(Clone)]
 /// the gadget for Poseidon sponge

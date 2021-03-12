@@ -8,7 +8,8 @@ use ark_r1cs_std::bits::boolean::Boolean;
 use ark_r1cs_std::bits::uint8::UInt8;
 use ark_r1cs_std::fields::fp::FpVar;
 use ark_relations::r1cs::{ConstraintSystemRef, SynthesisError};
-use std::marker::PhantomData;
+use ark_std::marker::PhantomData;
+use ark_std::vec::Vec;
 
 /// A sponge that offers backwards compatibility for implementations that do not accept sponge
 /// objects but require domain separation. Operates in the same way as fork.

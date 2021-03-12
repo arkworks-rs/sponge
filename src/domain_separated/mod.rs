@@ -1,8 +1,10 @@
 use crate::{Absorbable, CryptographicSponge, FieldElementSize};
 use ark_ff::PrimeField;
-use std::marker::PhantomData;
+use ark_std::marker::PhantomData;
+use ark_std::vec::Vec;
 
 /// The constraints version of the [`DomainSeparatedSponge`].
+#[cfg(feature = "r1cs")]
 pub mod constraints;
 
 /// Specifies the domain of a [`DomainSeparatedSponge`].

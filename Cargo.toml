@@ -12,20 +12,20 @@ derivative = { version = "2.1.1", features = [ "use_core" ] }
 digest = { version = "0.9.0", default_features = false }
 rand_core = { version = "0.5" }
 rand_chacha = { version = "0.2.1", default-features = false }
-tracing = { version = "0.1", default-features = false, features = [ "attributes" ] }
 
+# Dependencies for r1cs
 ark-nonnative-field = { git = "https://github.com/arkworks-rs/nonnative", default-features = false, optional = true }
 ark-r1cs-std = { git = "https://github.com/arkworks-rs/r1cs-std", default-features = false, optional = true }
 ark-relations = { git = "https://github.com/arkworks-rs/snark", default-features = false, optional = true }
+tracing = { version = "0.1", default-features = false, features = [ "attributes" ], optional = true }
 
 [dev-dependencies]
-sha2 = { version = "0.9.1", default_features = false}
-rand = "0.7.3"
 ark-ed-on-bls12-381 = { git = "https://github.com/arkworks-rs/curves", features = [ "r1cs" ] }
 ark-nonnative-field = { git = "https://github.com/arkworks-rs/nonnative", default-features = false }
 ark-pallas = { git = "https://github.com/arkworks-rs/curves", features = [ "r1cs" ] }
+rand = "0.7.3"
 
 [features]
-default = [ "std", "r1cs" ]
-std = [ "ark-ff/std", "ark-nonnative-field/std", "ark-std/std" ]
-r1cs = ["ark-nonnative-field", "ark-relations", "ark-r1cs-std"]
+default = [ "r1cs", "std" ]
+r1cs = [ "ark-nonnative-field", "ark-relations", "ark-r1cs-std", "tracing" ]
+std = [ "ark-ec/std", "ark-ff/std", "ark-nonnative-field/std", "ark-r1cs-std/std", "ark-relations/std", "ark-std/std" ]
