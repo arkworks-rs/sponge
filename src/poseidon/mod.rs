@@ -1,13 +1,7 @@
-/*
- * credit:
- *      This implementation of Poseidon is entirely from Fractal's implementation
- *      ([COS20]: https://eprint.iacr.org/2019/1076)
- *      with small syntax changes.
- */
-
-use crate::{Absorbable, CryptographicSponge, FieldElementSize, Vec};
+use crate::{Absorbable, CryptographicSponge};
 use ark_ff::{BigInteger, FpParameters, PrimeField};
 use rand_core::SeedableRng;
+use ark_std::vec::Vec;
 
 /// constraints for Poseidon
 #[cfg(feature = "r1cs")]
@@ -21,6 +15,11 @@ enum PoseidonSpongeState {
 
 #[derive(Clone)]
 /// the sponge for Poseidon
+///
+/// This implementation of Poseidon is entirely from Fractal's implementation in [COS20][cos]
+/// with small syntax changes.
+///
+/// [cos]: https://eprint.iacr.org/2019/1076
 pub struct PoseidonSponge<F: PrimeField> {
     /// number of rounds in a full-round operation
     full_rounds: u32,
@@ -29,7 +28,7 @@ pub struct PoseidonSponge<F: PrimeField> {
     /// Exponent used in S-boxes
     alpha: u64,
     /// Additive Round keys. These are added before each MDS matrix application to make it an affine shift.
-    /// They are indexed by ark[round_num][state_element_index]
+    /// They are indexed by `ark[round_num][state_element_index]`
     ark: Vec<Vec<F>>,
     /// Maximally Distance Separating Matrix.
     mds: Vec<Vec<F>>,
@@ -251,10 +250,6 @@ impl<F: PrimeField> CryptographicSponge<F> for PoseidonSponge<F> {
 
         bits.truncate(num_bits);
         bits
-    }
-
-    fn squeeze_field_elements_with_sizes(&mut self, sizes: &[FieldElementSize]) -> Vec<F> {
-        unimplemented!()
     }
 
     fn squeeze_field_elements(&mut self, num_elements: usize) -> Vec<F> {

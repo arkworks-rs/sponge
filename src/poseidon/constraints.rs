@@ -1,21 +1,20 @@
-/*
- * credit:
- *      This implementation of Poseidon is entirely from Fractal's implementation
- *      ([COS20]: https://eprint.iacr.org/2019/1076)
- *      with small syntax changes.
- */
-
+use crate::constraints::AbsorbableGadget;
 use crate::constraints::CryptographicSpongeVar;
 use crate::poseidon::{PoseidonSponge, PoseidonSpongeState};
-use crate::Vec;
 use ark_ff::{FpParameters, PrimeField};
 use ark_r1cs_std::fields::fp::FpVar;
 use ark_r1cs_std::prelude::*;
 use ark_relations::r1cs::{ConstraintSystemRef, SynthesisError};
 use rand_core::SeedableRng;
+use ark_std::vec::Vec;
 
 #[derive(Clone)]
 /// the gadget for Poseidon sponge
+///
+/// This implementation of Poseidon is entirely from Fractal's implementation in [COS20][cos]
+/// with small syntax changes.
+///
+/// [cos]: https://eprint.iacr.org/2019/1076
 pub struct PoseidonSpongeVar<F: PrimeField> {
     /// constraint system
     pub cs: ConstraintSystemRef<F>,
@@ -26,7 +25,7 @@ pub struct PoseidonSpongeVar<F: PrimeField> {
     /// Exponent used in S-boxes
     pub alpha: u64,
     /// Additive Round keys. These are added before each MDS matrix application to make it an affine shift.
-    /// They are indexed by ark[round_num][state_element_index]
+    /// They are indexed by `ark[round_num][state_element_index]`
     pub ark: Vec<Vec<F>>,
     /// Maximally Distance Separating Matrix.
     pub mds: Vec<Vec<F>>,
@@ -226,7 +225,8 @@ impl<F: PrimeField> CryptographicSpongeVar<F, PoseidonSponge<F>> for PoseidonSpo
     }
 
     #[tracing::instrument(target = "r1cs", skip(self, input))]
-    fn absorb(&mut self, input: &[FpVar<F>]) -> Result<(), SynthesisError> {
+    fn absorb(&mut self, input: &impl AbsorbableGadget<F>) -> Result<(), SynthesisError> {
+        let input = input.to_sponge_field_elements()?;
         if input.is_empty() {
             return Ok(());
         }
@@ -238,13 +238,13 @@ impl<F: PrimeField> CryptographicSpongeVar<F, PoseidonSponge<F>> for PoseidonSpo
                     self.permute()?;
                     absorb_index = 0;
                 }
-                self.absorb_internal(absorb_index, input)?;
+                self.absorb_internal(absorb_index, input.as_slice())?;
             }
             PoseidonSpongeState::Squeezing {
                 next_squeeze_index: _,
             } => {
                 self.permute()?;
-                self.absorb_internal(0, input)?;
+                self.absorb_internal(0, input.as_slice())?;
             }
         };
 

@@ -1,5 +1,3 @@
-#![cfg_attr(not(feature = "std"), no_std)]
-
 //! A crate for the cryptographic sponge trait.
 #![warn(
     const_err,
@@ -17,36 +15,36 @@
 )]
 #![forbid(unsafe_code)]
 
-#[cfg(feature = "std")]
-#[macro_use]
-extern crate std;
-
-#[cfg(not(feature = "std"))]
-#[macro_use]
-extern crate ark_std as std;
+use ark_ff::{FpParameters, PrimeField};
+use ark_std::vec::Vec;
 
 #[macro_use]
 extern crate derivative;
 
-pub use crate::absorbable::*;
-use ark_ff::models::{
-    Fp256, Fp256Parameters, Fp320, Fp320Parameters, Fp384, Fp384Parameters, Fp768, Fp768Parameters,
-    Fp832, Fp832Parameters,
-};
-use ark_ff::{to_bytes, FpParameters, PrimeField, ToConstraintField};
-use std::cmp::Ordering;
-use std::marker::PhantomData;
-use std::{vec, vec::Vec};
-
+/// Infrastructure for the constraints counterparts.
 #[cfg(feature = "r1cs")]
 pub mod constraints;
 
 mod absorbable;
+pub use absorbable::*;
 
-// TODO: Add back
-//pub mod digest_sponge;
+/// The sponge for Poseidon
+///
+/// This implementation of Poseidon is entirely from Fractal's implementation in [COS20][cos]
+/// with small syntax changes.
+///
+/// [cos]: https://eprint.iacr.org/2019/1076
 pub mod poseidon;
+/// The sponge for Rescue
+///
+/// This implementation of Rescue is based on the Sage scripts in
+/// https://github.com/KULeuven-COSIC/Marvellous
+///
 pub mod rescue;
+
+/// A sponge that offers backwards compatibility for implementations that do not accept sponge
+/// objects but require domain separation. Operates in the same way as fork.
+pub mod domain_separated;
 
 /// An enum for specifying the output field element size.
 #[derive(Clone, Copy, Eq, PartialEq)]
@@ -54,16 +52,13 @@ pub enum FieldElementSize {
     /// Sample field elements from the entire field.
     Full,
 
-    /// Sample field elements from a subset of the field.
-    Truncated {
-        /// The maximum size of the subset is 2^num_bits.
-        num_bits: usize,
-    },
+    /// Sample field elements from a subset of the field, specified by the maximum number of bits.
+    Truncated(usize),
 }
 
 impl FieldElementSize {
-    pub fn num_bits<F: PrimeField>(&self) -> usize {
-        if let FieldElementSize::Truncated { num_bits } = self {
+    pub(crate) fn num_bits<F: PrimeField>(&self) -> usize {
+        if let FieldElementSize::Truncated(num_bits) = self {
             *num_bits.min(&(F::Params::CAPACITY as usize))
         } else {
             F::Params::CAPACITY as usize
@@ -71,14 +66,29 @@ impl FieldElementSize {
     }
 }
 
+/// The mode structure for duplex sponges
+#[derive(Clone, Debug)]
+pub enum DuplexSpongeMode {
+    /// The sponge is currently absorbing data.
+    Absorbing {
+        /// next position of the state to be XOR-ed when absorbing.
+        next_absorb_index: usize },
+    /// The sponge is currently squeezing data out.
+    Squeezing {
+        /// next position of the state to be outputted when squeezing.
+        next_squeeze_index: usize
+    },
+}
+
 /// The interface for a cryptographic sponge.
 /// A sponge can `absorb` or take in inputs and later `squeeze` or output bytes or field elements.
 /// The outputs are dependent on previous `absorb` and `squeeze` calls.
 pub trait CryptographicSponge<CF: PrimeField>: Clone {
+    /// Parameters for the sponge.
     type Parameters: Clone;
 
     /// Initialize a new instance of the sponge.
-    fn new(params: Self::Parameters) -> Self;
+    fn new(params: &Self::Parameters) -> Self;
 
     /// Absorb an input into the sponge.
     fn absorb(&mut self, input: &impl Absorbable<CF>);
@@ -137,7 +147,7 @@ pub trait CryptographicSponge<CF: PrimeField>: Clone {
         let mut output = Vec::with_capacity(sizes.len());
         for size in sizes {
             let num_bits = size.num_bits::<F>();
-            let mut nonnative_bits_le: Vec<bool> = bits_window[..num_bits].to_vec();
+            let nonnative_bits_le: Vec<bool> = bits_window[..num_bits].to_vec();
             bits_window = &bits_window[num_bits..];
 
             let nonnative_bytes = nonnative_bits_le
@@ -165,65 +175,19 @@ pub trait CryptographicSponge<CF: PrimeField>: Clone {
             vec![FieldElementSize::Full; num_elements].as_slice(),
         )
     }
-}
 
-pub trait DomainSeparator {
-    fn domain() -> Vec<u8>;
-}
-
-#[derive(Derivative)]
-#[derivative(Clone(bound = "D: DomainSeparator"))]
-pub struct DomainSeparatedSponge<CF: PrimeField, S: CryptographicSponge<CF>, D: DomainSeparator> {
-    sponge: S,
-    _field_phantom: PhantomData<CF>,
-    _domain_phantom: PhantomData<D>,
-}
-
-impl<CF: PrimeField, S: CryptographicSponge<CF>, D: DomainSeparator> CryptographicSponge<CF>
-    for DomainSeparatedSponge<CF, S, D>
-{
-    type Parameters = S::Parameters;
-
-    fn new(params: S::Parameters) -> Self {
-        let mut sponge = S::new(params);
-        sponge.absorb(&D::domain());
-
-        Self {
-            sponge,
-            _field_phantom: PhantomData,
-            _domain_phantom: PhantomData,
-        }
+    /// Applies domain separation to a sponge
+    fn fork(&mut self, domain: &[u8]) -> &mut Self {
+        let mut input = Absorbable::<CF>::to_sponge_bytes(&domain.len());
+        input.extend_from_slice(domain);
+        self.absorb(&input);
+        self
     }
 
-    fn absorb(&mut self, input: &impl Absorbable<CF>) {
-        self.sponge.absorb(input);
-    }
-
-    fn squeeze_bytes(&mut self, num_bytes: usize) -> Vec<u8> {
-        self.sponge.squeeze_bytes(num_bytes)
-    }
-
-    fn squeeze_bits(&mut self, num_bits: usize) -> Vec<bool> {
-        self.sponge.squeeze_bits(num_bits)
-    }
-
-    fn squeeze_field_elements(&mut self, num_elements: usize) -> Vec<CF> {
-        self.sponge.squeeze_field_elements(num_elements)
-    }
-
-    fn squeeze_field_elements_with_sizes(&mut self, sizes: &[FieldElementSize]) -> Vec<CF> {
-        self.sponge.squeeze_field_elements_with_sizes(sizes)
-    }
-
-    fn squeeze_nonnative_field_elements_with_sizes<F: PrimeField>(
-        &mut self,
-        sizes: &[FieldElementSize],
-    ) -> Vec<F> {
-        self.sponge
-            .squeeze_nonnative_field_elements_with_sizes(sizes)
-    }
-
-    fn squeeze_nonnative_field_elements<F: PrimeField>(&mut self, num_elements: usize) -> Vec<F> {
-        self.sponge.squeeze_nonnative_field_elements(num_elements)
+    /// Creates a new sponge with applied domain separation.
+    fn new_fork(&self, domain: &[u8]) -> Self {
+        let mut new_sponge = self.clone();
+        new_sponge.fork(domain);
+        new_sponge
     }
 }
