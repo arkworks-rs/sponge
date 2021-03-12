@@ -64,9 +64,9 @@ where
     SV: CryptographicSpongeVar<CF, S>,
     D: DomainSeparator,
 {
-    fn new(cs: ConstraintSystemRef<CF>) -> Self {
+    fn new(cs: ConstraintSystemRef<CF>, params: &S::Parameters) -> Self {
         Self {
-            sponge: SV::new(cs),
+            sponge: SV::new(cs, params),
             domain_separated: false,
             _affine_phantom: PhantomData,
             _sponge_phantom: PhantomData,

@@ -1,99 +1,90 @@
+/*
+ * credit:
+ *      This implementation of Rescue is based on the Sage scripts in
+ *      https://github.com/KULeuven-COSIC/Marvellous
+ */
+
 use crate::constraints::AbsorbableGadget;
 use crate::constraints::CryptographicSpongeVar;
-use crate::poseidon::{PoseidonSponge, PoseidonSpongeState, PoseidonSpongeParameters};
+use crate::rescue::{RescueSponge, RescueSpongeParameters};
 use ark_ff::{FpParameters, PrimeField};
 use ark_r1cs_std::fields::fp::FpVar;
 use ark_r1cs_std::prelude::*;
 use ark_relations::r1cs::{ConstraintSystemRef, SynthesisError};
 use ark_std::vec::Vec;
+use crate::DuplexSpongeMode;
 
 #[derive(Clone, Debug)]
-/// the gadget for Poseidon sponge
-///
-/// This implementation of Poseidon is entirely from Fractal's implementation in [COS20][cos]
-/// with small syntax changes.
+/// the gadget for Rescue sponge
 ///
 /// [cos]: https://eprint.iacr.org/2019/1076
-pub struct PoseidonSpongeVar<F: PrimeField> {
+pub struct RescueSpongeVar<F: PrimeField> {
     /// Constraint system reference
     pub cs: ConstraintSystemRef<F>,
     /// Poseidon parameters
-    pub params: PoseidonSpongeParameters<F>,
+    pub params: RescueSpongeParameters<F>,
     /// the sponge's state
     pub state: Vec<FpVar<F>>,
     /// the mode
-    mode: PoseidonSpongeState,
+    pub mode: DuplexSpongeMode,
 }
 
-impl<F: PrimeField> PoseidonSpongeVar<F> {
+impl<F: PrimeField> RescueSpongeVar<F> {
     #[tracing::instrument(target = "r1cs", skip(self))]
-    fn apply_s_box(
-        &self,
-        state: &mut [FpVar<F>],
-        is_full_round: bool,
-    ) -> Result<(), SynthesisError> {
-        // Full rounds apply the S Box (x^alpha) to every element of state
-        if is_full_round {
-            for state_item in state.iter_mut() {
-                *state_item = state_item.pow_by_constant(&[self.params.alpha])?;
+    fn permute(&mut self) -> Result<(), SynthesisError>  {
+        let mut key_injection = self.params.initial_constant.clone();
+        let mut key_state = self.params.initial_constant.clone();
+
+        let state_len = self.params.rate + self.params.capacity;
+
+        for i in 0..state_len {
+            self.state[i] += key_state[i];
+        }
+
+        for r in 0..2 * self.params.rounds{
+            if r % 2 == 0 {
+                for i in 0..state_len {
+                    key_state[i] = key_state[i].pow(&self.params.invalpha);
+                    self.state[i] = self.state[i].pow_by_constant(&self.params.invalpha)?;
+                }
+            } else {
+                for i in 0..state_len {
+                    key_state[i] = key_state[i].pow(&self.params.alpha);
+                    self.state[i] = self.state[i].pow_by_constant(&self.params.alpha)?;
+                }
+            }
+
+            // key_injection <= constants_matrix * key_injection + constants_constant
+            let key_injection_old = key_injection.clone();
+            for i in 0..state_len {
+                key_injection[i] = F::zero();
+                for j in 0..state_len {
+                    key_injection[i] += self.params.constants_matrix[i][j] * key_injection_old[j];
+                }
+                key_injection[i] += self.params.constants_constant[i];
+            }
+
+            // key_state <= MDS * key_state + key_injection
+            let key_state_old = key_state.clone();
+            for i in 0..state_len {
+                key_state[i] = F::zero();
+                for j in 0..state_len {
+                    key_state[i] += self.params.mds[i][j] * key_state_old[j];
+                }
+                key_state[i] += key_injection[i];
+            }
+
+            // state <= MDS * state + key_state
+            let state_old = self.state.clone();
+            for i in 0..state_len {
+                self.state[i] = FpVar::<F>::zero();
+                for j in 0..state_len {
+                    self.state[i] += &state_old[j] * self.params.mds[i][j];
+                }
+                self.state[i] += key_state[i];
             }
         }
-        // Partial rounds apply the S Box (x^alpha) to just the final element of state
-        else {
-            state[state.len() - 1] = state[state.len() - 1].pow_by_constant(&[self.params.alpha])?;
-        }
 
-        Ok(())
-    }
-
-    #[tracing::instrument(target = "r1cs", skip(self))]
-    fn apply_ark(&self, state: &mut [FpVar<F>], round_number: usize) -> Result<(), SynthesisError> {
-        for (i, state_elem) in state.iter_mut().enumerate() {
-            *state_elem += self.params.ark[round_number][i];
-        }
-        Ok(())
-    }
-
-    #[tracing::instrument(target = "r1cs", skip(self))]
-    fn apply_mds(&self, state: &mut [FpVar<F>]) -> Result<(), SynthesisError> {
-        let mut new_state = Vec::new();
-        let zero = FpVar::<F>::zero();
-        for i in 0..state.len() {
-            let mut cur = zero.clone();
-            for (j, state_elem) in state.iter().enumerate() {
-                let term = state_elem * self.params.mds[i][j];
-                cur += &term;
-            }
-            new_state.push(cur);
-        }
-        state.clone_from_slice(&new_state[..state.len()]);
-        Ok(())
-    }
-
-    #[tracing::instrument(target = "r1cs", skip(self))]
-    fn permute(&mut self) -> Result<(), SynthesisError> {
-        let full_rounds_over_2 = self.params.full_rounds / 2;
-        let mut state = self.state.clone();
-        for i in 0..full_rounds_over_2 {
-            self.apply_ark(&mut state, i as usize)?;
-            self.apply_s_box(&mut state, true)?;
-            self.apply_mds(&mut state)?;
-        }
-        for i in full_rounds_over_2..(full_rounds_over_2 + self.params.partial_rounds) {
-            self.apply_ark(&mut state, i as usize)?;
-            self.apply_s_box(&mut state, false)?;
-            self.apply_mds(&mut state)?;
-        }
-
-        for i in
-            (full_rounds_over_2 + self.params.partial_rounds)..(self.params.partial_rounds + self.params.full_rounds)
-        {
-            self.apply_ark(&mut state, i as usize)?;
-            self.apply_s_box(&mut state, true)?;
-            self.apply_mds(&mut state)?;
-        }
-
-        self.state = state;
         Ok(())
     }
 
@@ -108,7 +99,7 @@ impl<F: PrimeField> PoseidonSpongeVar<F> {
             for (i, element) in elements.iter().enumerate() {
                 self.state[i + rate_start_index] += element;
             }
-            self.mode = PoseidonSpongeState::Absorbing {
+            self.mode = DuplexSpongeMode::Absorbing {
                 next_absorb_index: rate_start_index + elements.len(),
             };
 
@@ -135,7 +126,7 @@ impl<F: PrimeField> PoseidonSpongeVar<F> {
         if rate_start_index + output.len() <= self.params.rate {
             output
                 .clone_from_slice(&self.state[rate_start_index..(output.len() + rate_start_index)]);
-            self.mode = PoseidonSpongeState::Squeezing {
+            self.mode = DuplexSpongeMode::Squeezing {
                 next_squeeze_index: rate_start_index + output.len(),
             };
             return Ok(());
@@ -155,14 +146,14 @@ impl<F: PrimeField> PoseidonSpongeVar<F> {
     }
 }
 
-impl<F: PrimeField> CryptographicSpongeVar<F, PoseidonSponge<F>> for PoseidonSpongeVar<F> {
+impl<F: PrimeField> CryptographicSpongeVar<F, RescueSponge<F>> for RescueSpongeVar<F> {
     #[tracing::instrument(target = "r1cs", skip(cs))]
-    fn new(cs: ConstraintSystemRef<F>, params: &PoseidonSpongeParameters<F>) -> Self {
+    fn new(cs: ConstraintSystemRef<F>, params: &RescueSpongeParameters<F>) -> Self {
         Self {
             cs: cs,
             params: params.clone(),
             state: vec![ FpVar::<F>::zero(); params.rate + params.capacity],
-            mode:  PoseidonSpongeState::Absorbing {
+            mode: DuplexSpongeMode::Absorbing {
                 next_absorb_index: 0,
             }
         }
@@ -181,7 +172,7 @@ impl<F: PrimeField> CryptographicSpongeVar<F, PoseidonSponge<F>> for PoseidonSpo
         }
 
         match self.mode {
-            PoseidonSpongeState::Absorbing { next_absorb_index } => {
+            DuplexSpongeMode::Absorbing { next_absorb_index } => {
                 let mut absorb_index = next_absorb_index;
                 if absorb_index == self.params.rate {
                     self.permute()?;
@@ -189,7 +180,7 @@ impl<F: PrimeField> CryptographicSpongeVar<F, PoseidonSponge<F>> for PoseidonSpo
                 }
                 self.absorb_internal(absorb_index, input.as_slice())?;
             }
-            PoseidonSpongeState::Squeezing {
+            DuplexSpongeMode::Squeezing {
                 next_squeeze_index: _,
             } => {
                 self.permute()?;
@@ -240,13 +231,13 @@ impl<F: PrimeField> CryptographicSpongeVar<F, PoseidonSponge<F>> for PoseidonSpo
         let zero = FpVar::zero();
         let mut squeezed_elems = vec![zero; num_elements];
         match self.mode {
-            PoseidonSpongeState::Absorbing {
+            DuplexSpongeMode::Absorbing {
                 next_absorb_index: _,
             } => {
                 self.permute()?;
                 self.squeeze_internal(0, &mut squeezed_elems)?;
             }
-            PoseidonSpongeState::Squeezing { next_squeeze_index } => {
+            DuplexSpongeMode::Squeezing { next_squeeze_index } => {
                 let mut squeeze_index = next_squeeze_index;
                 if squeeze_index == self.params.rate {
                     self.permute()?;

@@ -26,8 +26,10 @@ pub struct DomainSeparatedSponge<CF: PrimeField, S: CryptographicSponge<CF>, D: 
 impl<CF: PrimeField, S: CryptographicSponge<CF>, D: DomainSeparator> CryptographicSponge<CF>
     for DomainSeparatedSponge<CF, S, D>
 {
-    fn new() -> Self {
-        let mut sponge = S::new();
+    type Parameters = S::Parameters;
+
+    fn new(params: &S::Parameters) -> Self {
+        let mut sponge = S::new(params);
 
         let mut domain = D::domain();
         let mut input = Absorbable::<CF>::to_sponge_bytes(&domain.len());
