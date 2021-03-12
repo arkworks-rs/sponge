@@ -33,7 +33,6 @@ pub struct PoseidonSpongeParameters<F: PrimeField> {
     pub capacity: usize,
 }
 
-
 #[derive(Clone)]
 /// the sponge for Poseidon
 ///
@@ -98,8 +97,8 @@ impl<F: PrimeField> PoseidonSponge<F> {
             self.apply_mds(&mut state);
         }
 
-        for i in
-            (full_rounds_over_2 + self.params.partial_rounds)..(self.params.partial_rounds + self.params.full_rounds)
+        for i in (full_rounds_over_2 + self.params.partial_rounds)
+            ..(self.params.partial_rounds + self.params.full_rounds)
         {
             self.apply_ark(&mut state, i as usize);
             self.apply_s_box(&mut state, true);

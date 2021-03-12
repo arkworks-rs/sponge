@@ -72,11 +72,12 @@ pub enum DuplexSpongeMode {
     /// The sponge is currently absorbing data.
     Absorbing {
         /// next position of the state to be XOR-ed when absorbing.
-        next_absorb_index: usize },
+        next_absorb_index: usize,
+    },
     /// The sponge is currently squeezing data out.
     Squeezing {
         /// next position of the state to be outputted when squeezing.
-        next_squeeze_index: usize
+        next_squeeze_index: usize,
     },
 }
 

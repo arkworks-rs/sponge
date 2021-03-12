@@ -7,12 +7,12 @@
 use crate::constraints::AbsorbableGadget;
 use crate::constraints::CryptographicSpongeVar;
 use crate::rescue::{RescueSponge, RescueSpongeParameters};
+use crate::DuplexSpongeMode;
 use ark_ff::{FpParameters, PrimeField};
 use ark_r1cs_std::fields::fp::FpVar;
 use ark_r1cs_std::prelude::*;
 use ark_relations::r1cs::{ConstraintSystemRef, SynthesisError};
 use ark_std::vec::Vec;
-use crate::DuplexSpongeMode;
 
 #[derive(Clone, Debug)]
 /// the gadget for Rescue sponge
@@ -31,7 +31,7 @@ pub struct RescueSpongeVar<F: PrimeField> {
 
 impl<F: PrimeField> RescueSpongeVar<F> {
     #[tracing::instrument(target = "r1cs", skip(self))]
-    fn permute(&mut self) -> Result<(), SynthesisError>  {
+    fn permute(&mut self) -> Result<(), SynthesisError> {
         let mut key_injection = self.params.initial_constant.clone();
         let mut key_state = self.params.initial_constant.clone();
 
@@ -41,7 +41,7 @@ impl<F: PrimeField> RescueSpongeVar<F> {
             self.state[i] += key_state[i];
         }
 
-        for r in 0..2 * self.params.rounds{
+        for r in 0..2 * self.params.rounds {
             if r % 2 == 0 {
                 for i in 0..state_len {
                     key_state[i] = key_state[i].pow(&self.params.invalpha);
@@ -152,10 +152,10 @@ impl<F: PrimeField> CryptographicSpongeVar<F, RescueSponge<F>> for RescueSpongeV
         Self {
             cs: cs,
             params: params.clone(),
-            state: vec![ FpVar::<F>::zero(); params.rate + params.capacity],
+            state: vec![FpVar::<F>::zero(); params.rate + params.capacity],
             mode: DuplexSpongeMode::Absorbing {
                 next_absorb_index: 0,
-            }
+            },
         }
     }
 

@@ -1,12 +1,12 @@
 use crate::constraints::AbsorbableGadget;
 use crate::constraints::CryptographicSpongeVar;
 use crate::poseidon::{PoseidonSponge, PoseidonSpongeParameters};
+use crate::DuplexSpongeMode;
 use ark_ff::{FpParameters, PrimeField};
 use ark_r1cs_std::fields::fp::FpVar;
 use ark_r1cs_std::prelude::*;
 use ark_relations::r1cs::{ConstraintSystemRef, SynthesisError};
 use ark_std::vec::Vec;
-use crate::DuplexSpongeMode;
 
 #[derive(Clone, Debug)]
 /// the gadget for Poseidon sponge
@@ -41,7 +41,8 @@ impl<F: PrimeField> PoseidonSpongeVar<F> {
         }
         // Partial rounds apply the S Box (x^alpha) to just the final element of state
         else {
-            state[state.len() - 1] = state[state.len() - 1].pow_by_constant(&[self.params.alpha])?;
+            state[state.len() - 1] =
+                state[state.len() - 1].pow_by_constant(&[self.params.alpha])?;
         }
 
         Ok(())
@@ -86,8 +87,8 @@ impl<F: PrimeField> PoseidonSpongeVar<F> {
             self.apply_mds(&mut state)?;
         }
 
-        for i in
-            (full_rounds_over_2 + self.params.partial_rounds)..(self.params.partial_rounds + self.params.full_rounds)
+        for i in (full_rounds_over_2 + self.params.partial_rounds)
+            ..(self.params.partial_rounds + self.params.full_rounds)
         {
             self.apply_ark(&mut state, i as usize)?;
             self.apply_s_box(&mut state, true)?;
@@ -162,10 +163,10 @@ impl<F: PrimeField> CryptographicSpongeVar<F, PoseidonSponge<F>> for PoseidonSpo
         Self {
             cs: cs,
             params: params.clone(),
-            state: vec![ FpVar::<F>::zero(); params.rate + params.capacity],
-            mode:  DuplexSpongeMode::Absorbing {
+            state: vec![FpVar::<F>::zero(); params.rate + params.capacity],
+            mode: DuplexSpongeMode::Absorbing {
                 next_absorb_index: 0,
-            }
+            },
         }
     }
 

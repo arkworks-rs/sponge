@@ -4,7 +4,7 @@
  *      https://github.com/KULeuven-COSIC/Marvellous
  */
 
-use crate::{Absorbable, CryptographicSponge, FieldElementSize, Vec, DuplexSpongeMode};
+use crate::{Absorbable, CryptographicSponge, DuplexSpongeMode, FieldElementSize, Vec};
 use ark_ff::{BigInteger, FpParameters, PrimeField};
 
 /// Constraints for Rescue.
@@ -67,7 +67,7 @@ impl<F: PrimeField> RescueSponge<F> {
             self.state[i] += key_state[i];
         }
 
-        for r in 0..2 * self.params.rounds{
+        for r in 0..2 * self.params.rounds {
             if r % 2 == 0 {
                 for i in 0..state_len {
                     key_state[i] = key_state[i].pow(&self.params.invalpha);
@@ -168,7 +168,7 @@ impl<F: PrimeField> CryptographicSponge<F> for RescueSponge<F> {
         Self {
             params: params.clone(),
             state: vec![F::zero(); params.rate + params.capacity],
-                mode: DuplexSpongeMode::Absorbing {
+            mode: DuplexSpongeMode::Absorbing {
                 next_absorb_index: 0,
             },
         }
