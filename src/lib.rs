@@ -46,6 +46,7 @@ mod absorbable;
 // TODO: Add back
 //pub mod digest_sponge;
 pub mod poseidon;
+pub mod rescue;
 
 /// An enum for specifying the output field element size.
 #[derive(Clone, Copy, Eq, PartialEq)]
@@ -74,8 +75,10 @@ impl FieldElementSize {
 /// A sponge can `absorb` or take in inputs and later `squeeze` or output bytes or field elements.
 /// The outputs are dependent on previous `absorb` and `squeeze` calls.
 pub trait CryptographicSponge<CF: PrimeField>: Clone {
+    type Parameters: Clone;
+
     /// Initialize a new instance of the sponge.
-    fn new() -> Self;
+    fn new(params: Self::Parameters) -> Self;
 
     /// Absorb an input into the sponge.
     fn absorb(&mut self, input: &impl Absorbable<CF>);
@@ -179,8 +182,10 @@ pub struct DomainSeparatedSponge<CF: PrimeField, S: CryptographicSponge<CF>, D: 
 impl<CF: PrimeField, S: CryptographicSponge<CF>, D: DomainSeparator> CryptographicSponge<CF>
     for DomainSeparatedSponge<CF, S, D>
 {
-    fn new() -> Self {
-        let mut sponge = S::new();
+    type Parameters = S::Parameters;
+
+    fn new(params: S::Parameters) -> Self {
+        let mut sponge = S::new(params);
         sponge.absorb(&D::domain());
 
         Self {
