@@ -4,8 +4,9 @@
  *      https://github.com/KULeuven-COSIC/Marvellous
  */
 
-use crate::{Absorbable, CryptographicSponge, DuplexSpongeMode, FieldElementSize, Vec};
+use crate::{Absorbable, CryptographicSponge, DuplexSpongeMode, FieldElementSize};
 use ark_ff::{BigInteger, FpParameters, PrimeField};
+use ark_std::{vec, vec::Vec};
 
 /// Constraints for Rescue.
 #[cfg(feature = "r1cs")]
@@ -253,6 +254,6 @@ impl<F: PrimeField> CryptographicSponge<F> for RescueSponge<F> {
             }
         };
 
-        squeezed_elems
+        squeezed_elems.to_vec()
     }
 }

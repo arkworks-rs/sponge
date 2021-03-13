@@ -13,10 +13,11 @@
     variant_size_differences,
     warnings
 )]
+#![no_std]
 #![forbid(unsafe_code)]
 
 use ark_ff::{FpParameters, PrimeField};
-use ark_std::vec::Vec;
+use ark_std::{vec, vec::Vec};
 
 #[macro_use]
 extern crate derivative;
