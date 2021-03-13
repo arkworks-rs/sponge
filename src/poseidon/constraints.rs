@@ -6,7 +6,7 @@ use ark_ff::{FpParameters, PrimeField};
 use ark_r1cs_std::fields::fp::FpVar;
 use ark_r1cs_std::prelude::*;
 use ark_relations::r1cs::{ConstraintSystemRef, SynthesisError};
-use ark_std::vec::Vec;
+use ark_std::{vec, vec::Vec};
 
 #[derive(Clone, Debug)]
 /// the gadget for Poseidon sponge
@@ -258,6 +258,6 @@ impl<F: PrimeField> CryptographicSpongeVar<F, PoseidonSponge<F>> for PoseidonSpo
             }
         };
 
-        Ok(squeezed_elems)
+        Ok(squeezed_elems.to_vec())
     }
 }

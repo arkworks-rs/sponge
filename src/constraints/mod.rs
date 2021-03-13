@@ -9,7 +9,7 @@ use ark_r1cs_std::fields::fp::{AllocatedFp, FpVar};
 use ark_r1cs_std::R1CSVar;
 use ark_relations::lc;
 use ark_relations::r1cs::{ConstraintSystemRef, LinearCombination, SynthesisError};
-use ark_std::vec::Vec;
+use ark_std::{vec, vec::Vec};
 
 mod absorbable;
 pub use absorbable::*;
