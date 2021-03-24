@@ -7,6 +7,7 @@ use ark_ff::models::{
 };
 use ark_ff::{to_bytes, PrimeField, ToConstraintField};
 use ark_std::vec::Vec;
+use ark_std::vec;
 
 /// An interface for objects that can be absorbed by a `CryptographicSponge`.
 pub trait Absorbable<F: PrimeField> {

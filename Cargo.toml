@@ -19,12 +19,6 @@ ark-r1cs-std = { git = "https://github.com/arkworks-rs/r1cs-std", default-featur
 ark-relations = { git = "https://github.com/arkworks-rs/snark", default-features = false, optional = true }
 tracing = { version = "0.1", default-features = false, features = [ "attributes" ], optional = true }
 
-[dev-dependencies]
-ark-ed-on-bls12-381 = { git = "https://github.com/arkworks-rs/curves", features = [ "r1cs" ] }
-ark-nonnative-field = { git = "https://github.com/arkworks-rs/nonnative", default-features = false }
-ark-pallas = { git = "https://github.com/arkworks-rs/curves", features = [ "r1cs" ] }
-rand = "0.7.3"
-
 [features]
 default = [ "r1cs", "std" ]
 r1cs = [ "ark-nonnative-field", "ark-relations", "ark-r1cs-std", "tracing" ]

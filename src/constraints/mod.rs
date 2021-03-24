@@ -7,6 +7,7 @@ use ark_r1cs_std::bits::boolean::Boolean;
 use ark_r1cs_std::bits::uint8::UInt8;
 use ark_r1cs_std::fields::fp::{AllocatedFp, FpVar};
 use ark_r1cs_std::R1CSVar;
+use ark_std::vec;
 use ark_relations::lc;
 use ark_relations::r1cs::{ConstraintSystemRef, LinearCombination, SynthesisError};
 use ark_std::vec::Vec;

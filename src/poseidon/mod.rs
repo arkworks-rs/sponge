@@ -1,6 +1,7 @@
 use crate::{Absorbable, CryptographicSponge};
 use ark_ff::{BigInteger, FpParameters, PrimeField};
 use ark_std::vec::Vec;
+use ark_std::vec;
 use rand_core::SeedableRng;
 
 /// constraints for Poseidon

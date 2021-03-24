@@ -1,3 +1,5 @@
+#![cfg_attr(not(feature = "std"), no_std)]
+
 //! A crate for the cryptographic sponge trait.
 #![warn(
     const_err,
@@ -17,6 +19,7 @@
 
 use ark_ff::{FpParameters, PrimeField};
 use ark_std::vec::Vec;
+use ark_std::vec;
 
 #[macro_use]
 extern crate derivative;
