@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 //! A crate for the cryptographic sponge trait.
-#![warn(
+#![deny(
     const_err,
     future_incompatible,
     missing_docs,
@@ -150,18 +150,14 @@ pub trait CryptographicSponge<CF: PrimeField>: Clone {
         )
     }
 
-    /// Applies domain separation to a sponge
-    fn fork(&mut self, domain: &[u8]) -> &mut Self {
+    /// Creates a new sponge with applied domain separation.
+    fn fork(&self, domain: &[u8]) -> Self {
+        let mut new_sponge = self.clone();
+
         let mut input = Absorbable::<CF>::to_sponge_bytes(&domain.len());
         input.extend_from_slice(domain);
-        self.absorb(&input);
-        self
-    }
+        new_sponge.absorb(&input);
 
-    /// Creates a new sponge with applied domain separation.
-    fn new_fork(&self, domain: &[u8]) -> Self {
-        let mut new_sponge = self.clone();
-        new_sponge.fork(domain);
         new_sponge
     }
 }

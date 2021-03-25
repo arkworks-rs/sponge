@@ -158,8 +158,10 @@ pub trait CryptographicSpongeVar<CF: PrimeField, S: CryptographicSponge<CF>>: Cl
         )
     }
 
-    /// Applies domain separation to a sponge
-    fn fork(&mut self, domain: &[u8]) -> Result<&mut Self, SynthesisError> {
+    /// Creates a new sponge with applied domain separation.
+    fn new_fork(&self, domain: &[u8]) -> Result<Self, SynthesisError> {
+        let mut new_sponge = self.clone();
+
         let mut input = Absorbable::<CF>::to_sponge_bytes(&domain.len());
         input.extend_from_slice(domain);
 
@@ -169,14 +171,8 @@ pub trait CryptographicSpongeVar<CF: PrimeField, S: CryptographicSponge<CF>>: Cl
             .map(|elem| FpVar::Constant(elem))
             .collect::<Vec<_>>();
 
-        self.absorb(&elem_vars)?;
-        Ok(self)
-    }
+        new_sponge.absorb(&elem_vars)?;
 
-    /// Creates a new sponge with applied domain separation.
-    fn new_fork(&self, domain: &[u8]) -> Result<Self, SynthesisError> {
-        let mut new_sponge = self.clone();
-        new_sponge.fork(domain)?;
         Ok(new_sponge)
     }
 }
