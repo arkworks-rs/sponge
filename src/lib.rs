@@ -161,3 +161,14 @@ pub trait CryptographicSponge<CF: PrimeField>: Clone {
         new_sponge
     }
 }
+
+/// An extension for the inferface of a cryptographic sponge.
+/// In addition to operations defined in `CryptographicSponge`, `SpongeExt` can convert itself to
+/// a state, and instantiate itself from state.
+pub trait SpongeExt: CryptographicSponge {
+    type State: Clone;
+    /// Returns a sponge that uses `state`.
+    fn from_state(state: Self::State) -> Self;
+    /// Consumes `self` and returns the state.
+    fn into_state(self) -> Self::State;
+}
