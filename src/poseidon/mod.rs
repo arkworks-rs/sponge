@@ -1,7 +1,7 @@
-use crate::{Absorbable, CryptographicSponge};
+use crate::{Absorbable, CryptographicSponge, SpongeExt};
 use ark_ff::{BigInteger, FpParameters, PrimeField};
-use ark_std::vec::Vec;
 use ark_std::vec;
+use ark_std::vec::Vec;
 use rand_core::SeedableRng;
 
 /// constraints for Poseidon
@@ -9,7 +9,7 @@ use rand_core::SeedableRng;
 pub mod constraints;
 
 #[derive(Clone)]
-enum PoseidonSpongeState {
+enum PoseidonSpongeMode {
     Absorbing { next_absorb_index: usize },
     Squeezing { next_squeeze_index: usize },
 }
@@ -41,7 +41,7 @@ pub struct PoseidonSponge<F: PrimeField> {
     /// the capacity
     capacity: usize,
     /// the mode
-    mode: PoseidonSpongeState,
+    mode: PoseidonSpongeMode,
 }
 
 impl<F: PrimeField> PoseidonSponge<F> {
@@ -109,7 +109,7 @@ impl<F: PrimeField> PoseidonSponge<F> {
             for (i, element) in elements.iter().enumerate() {
                 self.state[i + rate_start_index] += element;
             }
-            self.mode = PoseidonSpongeState::Absorbing {
+            self.mode = PoseidonSpongeMode::Absorbing {
                 next_absorb_index: rate_start_index + elements.len(),
             };
 
@@ -131,7 +131,7 @@ impl<F: PrimeField> PoseidonSponge<F> {
         if rate_start_index + output.len() <= self.rate {
             output
                 .clone_from_slice(&self.state[rate_start_index..(output.len() + rate_start_index)]);
-            self.mode = PoseidonSpongeState::Squeezing {
+            self.mode = PoseidonSpongeMode::Squeezing {
                 next_squeeze_index: rate_start_index + output.len(),
             };
             return;
@@ -179,7 +179,7 @@ impl<F: PrimeField> CryptographicSponge<F> for PoseidonSponge<F> {
         let rate = 2;
         let capacity = 1;
         let state = vec![F::zero(); rate + capacity];
-        let mode = PoseidonSpongeState::Absorbing {
+        let mode = PoseidonSpongeMode::Absorbing {
             next_absorb_index: 0,
         };
 
@@ -204,7 +204,7 @@ impl<F: PrimeField> CryptographicSponge<F> for PoseidonSponge<F> {
         }
 
         match self.mode {
-            PoseidonSpongeState::Absorbing { next_absorb_index } => {
+            PoseidonSpongeMode::Absorbing { next_absorb_index } => {
                 let mut absorb_index = next_absorb_index;
                 if absorb_index == self.rate {
                     self.permute();
@@ -212,7 +212,7 @@ impl<F: PrimeField> CryptographicSponge<F> for PoseidonSponge<F> {
                 }
                 self.absorb_internal(absorb_index, elems.as_slice());
             }
-            PoseidonSpongeState::Squeezing {
+            PoseidonSpongeMode::Squeezing {
                 next_squeeze_index: _,
             } => {
                 self.permute();
@@ -256,13 +256,13 @@ impl<F: PrimeField> CryptographicSponge<F> for PoseidonSponge<F> {
     fn squeeze_field_elements(&mut self, num_elements: usize) -> Vec<F> {
         let mut squeezed_elems = vec![F::zero(); num_elements];
         match self.mode {
-            PoseidonSpongeState::Absorbing {
+            PoseidonSpongeMode::Absorbing {
                 next_absorb_index: _,
             } => {
                 self.permute();
                 self.squeeze_internal(0, &mut squeezed_elems);
             }
-            PoseidonSpongeState::Squeezing { next_squeeze_index } => {
+            PoseidonSpongeMode::Squeezing { next_squeeze_index } => {
                 let mut squeeze_index = next_squeeze_index;
                 if squeeze_index == self.rate {
                     self.permute();
@@ -273,5 +273,30 @@ impl<F: PrimeField> CryptographicSponge<F> for PoseidonSponge<F> {
         };
 
         squeezed_elems
+    }
+}
+
+#[derive(Clone)]
+/// Stores the state of a Poseidon Sponge. Does not store any parameter.
+pub struct PoseidonSpongeState<F: PrimeField> {
+    state: Vec<F>,
+    mode: PoseidonSpongeMode,
+}
+
+impl<CF: PrimeField> SpongeExt<CF> for PoseidonSponge<CF> {
+    type State = PoseidonSpongeState<CF>;
+
+    fn from_state(state: Self::State) -> Self {
+        let mut sponge = Self::new();
+        sponge.mode = state.mode;
+        sponge.state = state.state;
+        sponge
+    }
+
+    fn into_state(self) -> Self::State {
+        Self::State {
+            state: self.state,
+            mode: self.mode,
+        }
     }
 }

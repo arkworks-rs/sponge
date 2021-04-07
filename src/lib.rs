@@ -18,8 +18,8 @@
 #![forbid(unsafe_code)]
 
 use ark_ff::{FpParameters, PrimeField};
-use ark_std::vec::Vec;
 use ark_std::vec;
+use ark_std::vec::Vec;
 
 #[macro_use]
 extern crate derivative;
@@ -165,7 +165,8 @@ pub trait CryptographicSponge<CF: PrimeField>: Clone {
 /// An extension for the inferface of a cryptographic sponge.
 /// In addition to operations defined in `CryptographicSponge`, `SpongeExt` can convert itself to
 /// a state, and instantiate itself from state.
-pub trait SpongeExt: CryptographicSponge {
+pub trait SpongeExt<CF: PrimeField>: CryptographicSponge<CF> {
+    /// The full state of the cryptographic sponge.
     type State: Clone;
     /// Returns a sponge that uses `state`.
     fn from_state(state: Self::State) -> Self;

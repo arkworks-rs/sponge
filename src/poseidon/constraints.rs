@@ -1,13 +1,13 @@
 use crate::constraints::AbsorbableGadget;
 use crate::constraints::CryptographicSpongeVar;
-use crate::poseidon::{PoseidonSponge, PoseidonSpongeState};
+use crate::poseidon::{PoseidonSponge, PoseidonSpongeMode};
 use ark_ff::{FpParameters, PrimeField};
 use ark_r1cs_std::fields::fp::FpVar;
 use ark_r1cs_std::prelude::*;
 use ark_relations::r1cs::{ConstraintSystemRef, SynthesisError};
+use ark_std::vec;
 use ark_std::vec::Vec;
 use rand_core::SeedableRng;
-use ark_std::vec;
 
 #[derive(Clone)]
 /// the gadget for Poseidon sponge
@@ -38,7 +38,7 @@ pub struct PoseidonSpongeVar<F: PrimeField> {
     /// the capacity
     pub capacity: usize,
     /// the mode
-    mode: PoseidonSpongeState,
+    mode: PoseidonSpongeMode,
 }
 
 impl<F: PrimeField> PoseidonSpongeVar<F> {
@@ -124,7 +124,7 @@ impl<F: PrimeField> PoseidonSpongeVar<F> {
             for (i, element) in elements.iter().enumerate() {
                 self.state[i + rate_start_index] += element;
             }
-            self.mode = PoseidonSpongeState::Absorbing {
+            self.mode = PoseidonSpongeMode::Absorbing {
                 next_absorb_index: rate_start_index + elements.len(),
             };
 
@@ -151,7 +151,7 @@ impl<F: PrimeField> PoseidonSpongeVar<F> {
         if rate_start_index + output.len() <= self.rate {
             output
                 .clone_from_slice(&self.state[rate_start_index..(output.len() + rate_start_index)]);
-            self.mode = PoseidonSpongeState::Squeezing {
+            self.mode = PoseidonSpongeMode::Squeezing {
                 next_squeeze_index: rate_start_index + output.len(),
             };
             return Ok(());
@@ -201,7 +201,7 @@ impl<F: PrimeField> CryptographicSpongeVar<F, PoseidonSponge<F>> for PoseidonSpo
         let capacity = 1;
         let zero = FpVar::<F>::zero();
         let state = vec![zero; rate + capacity];
-        let mode = PoseidonSpongeState::Absorbing {
+        let mode = PoseidonSpongeMode::Absorbing {
             next_absorb_index: 0,
         };
 
@@ -233,7 +233,7 @@ impl<F: PrimeField> CryptographicSpongeVar<F, PoseidonSponge<F>> for PoseidonSpo
         }
 
         match self.mode {
-            PoseidonSpongeState::Absorbing { next_absorb_index } => {
+            PoseidonSpongeMode::Absorbing { next_absorb_index } => {
                 let mut absorb_index = next_absorb_index;
                 if absorb_index == self.rate {
                     self.permute()?;
@@ -241,7 +241,7 @@ impl<F: PrimeField> CryptographicSpongeVar<F, PoseidonSponge<F>> for PoseidonSpo
                 }
                 self.absorb_internal(absorb_index, input.as_slice())?;
             }
-            PoseidonSpongeState::Squeezing {
+            PoseidonSpongeMode::Squeezing {
                 next_squeeze_index: _,
             } => {
                 self.permute()?;
@@ -292,13 +292,13 @@ impl<F: PrimeField> CryptographicSpongeVar<F, PoseidonSponge<F>> for PoseidonSpo
         let zero = FpVar::zero();
         let mut squeezed_elems = vec![zero; num_elements];
         match self.mode {
-            PoseidonSpongeState::Absorbing {
+            PoseidonSpongeMode::Absorbing {
                 next_absorb_index: _,
             } => {
                 self.permute()?;
                 self.squeeze_internal(0, &mut squeezed_elems)?;
             }
-            PoseidonSpongeState::Squeezing { next_squeeze_index } => {
+            PoseidonSpongeMode::Squeezing { next_squeeze_index } => {
                 let mut squeeze_index = next_squeeze_index;
                 if squeeze_index == self.rate {
                     self.permute()?;
