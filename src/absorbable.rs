@@ -30,6 +30,22 @@ pub trait Absorb<F: PrimeField> {
         output
     }
 
+    /// Specifies the conversion into a list of bytes for a batch along with its length information.
+    fn batch_to_sponge_bytes_with_length(batch: &[Self]) -> Vec<u8>
+    where
+        Self: Sized,
+    {
+        let mut output = Vec::new();
+        output.append(&mut <u64 as Absorb<F>>::to_sponge_bytes(
+            &(batch.len() as u64),
+        ));
+        for absorbable in batch {
+            output.append(&mut absorbable.to_sponge_bytes());
+        }
+
+        output
+    }
+
     /// Specifies the conversion into a list of field elements for a batch.
     fn batch_to_sponge_field_elements(batch: &[Self]) -> Vec<F>
     where
@@ -42,6 +58,33 @@ pub trait Absorb<F: PrimeField> {
 
         output
     }
+
+    /// Specifies the conversion into a list of field elements for a batch along with its length information.
+    fn batch_to_sponge_field_elements_with_length(batch: &[Self]) -> Vec<F>
+    where
+        Self: Sized,
+    {
+        let mut output = Vec::new();
+        output.append(&mut <u64 as Absorb<F>>::to_sponge_field_elements(
+            &(batch.len() as u64),
+        ));
+        for absorbable in batch {
+            output.append(&mut absorbable.to_sponge_field_elements());
+        }
+
+        output
+    }
+}
+
+/// An extension to `Absorb` interface that allows an option for sponge to absorb length information.
+/// This extended interface should be used in cases when the length of `self` is list-like and
+pub trait AbsorbWithLength<F: PrimeField>: Absorb<F> {
+    /// Converts the object and its length information into a list of bytes that
+    /// can be absorbed by a `CryptographicSponge`.
+    fn to_sponge_bytes_with_length(&self) -> Vec<u8>;
+
+    /// Converts the object and its length information into field elements that can be absorbed by a `CryptographicSponge`.
+    fn to_sponge_field_elements_with_length(&self) -> Vec<F>;
 }
 
 impl<F: PrimeField> Absorb<F> for u8 {
@@ -188,6 +231,16 @@ impl<F: PrimeField, A: Absorb<F>> Absorb<F> for &[A] {
     }
 }
 
+impl<F: PrimeField, A: Absorb<F>> AbsorbWithLength<F> for &[A] {
+    fn to_sponge_bytes_with_length(&self) -> Vec<u8> {
+        A::batch_to_sponge_bytes_with_length(self)
+    }
+
+    fn to_sponge_field_elements_with_length(&self) -> Vec<F> {
+        A::batch_to_sponge_field_elements_with_length(self)
+    }
+}
+
 impl<F: PrimeField, A: Absorb<F>> Absorb<F> for Vec<A> {
     fn to_sponge_bytes(&self) -> Vec<u8> {
         self.as_slice().to_sponge_bytes()
@@ -195,6 +248,16 @@ impl<F: PrimeField, A: Absorb<F>> Absorb<F> for Vec<A> {
 
     fn to_sponge_field_elements(&self) -> Vec<F> {
         self.as_slice().to_sponge_field_elements()
+    }
+}
+
+impl<F: PrimeField, A: Absorb<F>> AbsorbWithLength<F> for Vec<A> {
+    fn to_sponge_bytes_with_length(&self) -> Vec<u8> {
+        self.as_slice().to_sponge_bytes_with_length()
+    }
+
+    fn to_sponge_field_elements_with_length(&self) -> Vec<F> {
+        self.as_slice().to_sponge_field_elements_with_length()
     }
 }
 
