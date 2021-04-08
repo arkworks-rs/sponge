@@ -19,6 +19,8 @@ use rand_core::SeedableRng;
 pub struct PoseidonSpongeVar<F: PrimeField> {
     /// constraint system
     pub cs: ConstraintSystemRef<F>,
+
+    // Sponge Parameters
     /// number of rounds in a full-round operation
     pub full_rounds: u32,
     /// number of rounds in a partial-round operation
@@ -30,13 +32,14 @@ pub struct PoseidonSpongeVar<F: PrimeField> {
     pub ark: Vec<Vec<F>>,
     /// Maximally Distance Separating Matrix.
     pub mds: Vec<Vec<F>>,
-
-    /// the sponge's state
-    pub state: Vec<FpVar<F>>,
     /// the rate
     pub rate: usize,
     /// the capacity
     pub capacity: usize,
+
+    // Sponge State
+    /// the sponge's state
+    pub state: Vec<FpVar<F>>,
     /// the mode
     mode: PoseidonSpongeMode,
 }

@@ -22,6 +22,7 @@ enum PoseidonSpongeMode {
 ///
 /// [cos]: https://eprint.iacr.org/2019/1076
 pub struct PoseidonSponge<F: PrimeField> {
+    // Sponge Parameters
     /// number of rounds in a full-round operation
     full_rounds: u32,
     /// number of rounds in a partial-round operation
@@ -33,14 +34,15 @@ pub struct PoseidonSponge<F: PrimeField> {
     ark: Vec<Vec<F>>,
     /// Maximally Distance Separating Matrix.
     mds: Vec<Vec<F>>,
-
-    /// the sponge's state
-    state: Vec<F>,
-    /// the rate
+    /// the rate (in terms of number of field elements)
     rate: usize,
-    /// the capacity
+    /// the capacity (in terms of number of field elements)
     capacity: usize,
-    /// the mode
+
+    // Sponge State
+    /// current sponge's state (current elements in the permutation block)
+    state: Vec<F>,
+    /// current mode (whether its absorbing or squeezing)
     mode: PoseidonSpongeMode,
 }
 
