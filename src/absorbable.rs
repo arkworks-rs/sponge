@@ -10,7 +10,7 @@ use ark_std::vec;
 use ark_std::vec::Vec;
 
 /// An interface for objects that can be absorbed by a `CryptographicSponge`.
-pub trait Absorbable<F: PrimeField> {
+pub trait Absorb<F: PrimeField> {
     /// Converts the object into a list of bytes that can be absorbed by a `CryptographicSponge`.
     fn to_sponge_bytes(&self) -> Vec<u8>;
 
@@ -44,7 +44,7 @@ pub trait Absorbable<F: PrimeField> {
     }
 }
 
-impl<F: PrimeField> Absorbable<F> for u8 {
+impl<F: PrimeField> Absorb<F> for u8 {
     fn to_sponge_bytes(&self) -> Vec<u8> {
         vec![*self]
     }
@@ -64,7 +64,7 @@ impl<F: PrimeField> Absorbable<F> for u8 {
     }
 }
 
-impl<F: PrimeField> Absorbable<F> for bool {
+impl<F: PrimeField> Absorb<F> for bool {
     fn to_sponge_bytes(&self) -> Vec<u8> {
         vec![(*self as u8)]
     }
@@ -76,7 +76,7 @@ impl<F: PrimeField> Absorbable<F> for bool {
 
 macro_rules! impl_absorbable_field {
     ($field:ident, $params:ident) => {
-        impl<P: $params> Absorbable<$field<P>> for $field<P> {
+        impl<P: $params> Absorb<$field<P>> for $field<P> {
             fn to_sponge_bytes(&self) -> Vec<u8> {
                 to_bytes![self].unwrap()
             }
@@ -100,7 +100,7 @@ impl_absorbable_field!(Fp832, Fp832Parameters);
 
 macro_rules! impl_absorbable_unsigned {
     ($t:ident) => {
-        impl<F: PrimeField> Absorbable<F> for $t {
+        impl<F: PrimeField> Absorb<F> for $t {
             fn to_sponge_bytes(&self) -> Vec<u8> {
                 self.to_le_bytes().to_vec()
             }
@@ -119,7 +119,7 @@ impl_absorbable_unsigned!(u128);
 
 macro_rules! impl_absorbable_signed {
     ($signed:ident, $unsigned:ident) => {
-        impl<F: PrimeField> Absorbable<F> for $signed {
+        impl<F: PrimeField> Absorb<F> for $signed {
             fn to_sponge_bytes(&self) -> Vec<u8> {
                 self.to_le_bytes().to_vec()
             }
@@ -143,9 +143,9 @@ impl_absorbable_signed!(i128, u128);
 
 macro_rules! impl_absorbable_size {
     ($t:ident) => {
-        impl<F: PrimeField> Absorbable<F> for $t {
+        impl<F: PrimeField> Absorb<F> for $t {
             fn to_sponge_bytes(&self) -> Vec<u8> {
-                Absorbable::<F>::to_sponge_bytes(&(*self as u64))
+                Absorb::<F>::to_sponge_bytes(&(*self as u64))
             }
 
             fn to_sponge_field_elements(&self) -> Vec<F> {
@@ -160,12 +160,12 @@ impl_absorbable_size!(isize);
 
 macro_rules! impl_absorbable_group {
     ($group:ident, $params:ident) => {
-        impl<P: $params, F: PrimeField> Absorbable<F> for $group<P>
+        impl<P: $params, F: PrimeField> Absorb<F> for $group<P>
         where
             P::BaseField: ToConstraintField<F>,
         {
             fn to_sponge_bytes(&self) -> Vec<u8> {
-                Absorbable::<F>::to_sponge_bytes(&to_bytes!(self).unwrap())
+                Absorb::<F>::to_sponge_bytes(&to_bytes!(self).unwrap())
             }
 
             fn to_sponge_field_elements(&self) -> Vec<F> {
@@ -178,7 +178,7 @@ macro_rules! impl_absorbable_group {
 impl_absorbable_group!(TEAffine, TEModelParameters);
 impl_absorbable_group!(SWAffine, SWModelParameters);
 
-impl<F: PrimeField, A: Absorbable<F>> Absorbable<F> for &[A] {
+impl<F: PrimeField, A: Absorb<F>> Absorb<F> for &[A] {
     fn to_sponge_bytes(&self) -> Vec<u8> {
         A::batch_to_sponge_bytes(self)
     }
@@ -188,7 +188,7 @@ impl<F: PrimeField, A: Absorbable<F>> Absorbable<F> for &[A] {
     }
 }
 
-impl<F: PrimeField, A: Absorbable<F>> Absorbable<F> for Vec<A> {
+impl<F: PrimeField, A: Absorb<F>> Absorb<F> for Vec<A> {
     fn to_sponge_bytes(&self) -> Vec<u8> {
         self.as_slice().to_sponge_bytes()
     }
@@ -198,7 +198,7 @@ impl<F: PrimeField, A: Absorbable<F>> Absorbable<F> for Vec<A> {
     }
 }
 
-impl<F: PrimeField, A: Absorbable<F>> Absorbable<F> for Option<A> {
+impl<F: PrimeField, A: Absorb<F>> Absorb<F> for Option<A> {
     fn to_sponge_bytes(&self) -> Vec<u8> {
         let mut output = vec![self.is_some() as u8];
         if let Some(absorbable) = self {
@@ -216,7 +216,7 @@ impl<F: PrimeField, A: Absorbable<F>> Absorbable<F> for Option<A> {
     }
 }
 
-impl<F: PrimeField, A: Absorbable<F>> Absorbable<F> for &A {
+impl<F: PrimeField, A: Absorb<F>> Absorb<F> for &A {
     fn to_sponge_bytes(&self) -> Vec<u8> {
         (*self).to_sponge_bytes()
     }
@@ -228,7 +228,7 @@ impl<F: PrimeField, A: Absorbable<F>> Absorbable<F> for &A {
 
 /// Individually absorbs each element in a comma-separated list of absorbables into a sponge.
 /// Format is `absorb!(s, a_0, a_1, ..., a_n)`, where `s` is a mutable reference to a sponge
-/// and each `a_i` implements `Absorbable`.
+/// and each `a_i` implements `Absorb`.
 #[macro_export]
 macro_rules! absorb {
     ($sponge:expr, $($absorbable:expr),+ ) => {
@@ -238,7 +238,7 @@ macro_rules! absorb {
     };
 }
 
-/// Quickly convert a list of different [`Absorbable`]s into sponge bytes.
+/// Quickly convert a list of different [`Absorb`]s into sponge bytes.
 #[macro_export]
 macro_rules! collect_sponge_bytes {
     ($type:ident, $head:expr $(, $tail:expr)* ) => {
@@ -252,14 +252,14 @@ macro_rules! collect_sponge_bytes {
     };
 }
 
-/// Quickly convert a list of different [`Absorbable`]s into sponge field elements.
+/// Quickly convert a list of different [`Absorb`]s into sponge field elements.
 #[macro_export]
 macro_rules! collect_sponge_field_elements {
     ($head:expr $(, $tail:expr)* ) => {
         {
-            let mut output = Absorbable::to_sponge_field_elements(&$head);
+            let mut output = Absorb::to_sponge_field_elements(&$head);
             $(
-                output.append(&mut Absorbable::to_sponge_field_elements(&$tail));
+                output.append(&mut Absorb::to_sponge_field_elements(&$tail));
             )*
             output
         }

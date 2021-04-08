@@ -71,7 +71,7 @@ pub trait CryptographicSponge<CF: PrimeField>: Clone {
     fn new() -> Self;
 
     /// Absorb an input into the sponge.
-    fn absorb(&mut self, input: &impl Absorbable<CF>);
+    fn absorb(&mut self, input: &impl Absorb<CF>);
 
     /// Squeeze `num_bytes` bytes from the sponge.
     fn squeeze_bytes(&mut self, num_bytes: usize) -> Vec<u8>;
@@ -154,7 +154,7 @@ pub trait CryptographicSponge<CF: PrimeField>: Clone {
     fn fork(&self, domain: &[u8]) -> Self {
         let mut new_sponge = self.clone();
 
-        let mut input = Absorbable::<CF>::to_sponge_bytes(&domain.len());
+        let mut input = Absorb::<CF>::to_sponge_bytes(&domain.len());
         input.extend_from_slice(domain);
         new_sponge.absorb(&input);
 

@@ -1,4 +1,4 @@
-use crate::{Absorbable, CryptographicSponge, FieldElementSize};
+use crate::{Absorb, CryptographicSponge, FieldElementSize};
 use ark_ff::PrimeField;
 use ark_nonnative_field::params::{get_params, OptimizationType};
 use ark_nonnative_field::{AllocatedNonNativeFieldVar, NonNativeFieldVar};
@@ -162,7 +162,7 @@ pub trait CryptographicSpongeVar<CF: PrimeField, S: CryptographicSponge<CF>>: Cl
     fn fork(&self, domain: &[u8]) -> Result<Self, SynthesisError> {
         let mut new_sponge = self.clone();
 
-        let mut input = Absorbable::<CF>::to_sponge_bytes(&domain.len());
+        let mut input = Absorb::<CF>::to_sponge_bytes(&domain.len());
         input.extend_from_slice(domain);
 
         let elems: Vec<CF> = input.to_sponge_field_elements();

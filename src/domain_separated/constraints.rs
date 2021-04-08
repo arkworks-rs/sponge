@@ -1,7 +1,7 @@
 use crate::constraints::AbsorbableGadget;
 use crate::constraints::CryptographicSpongeVar;
 use crate::domain_separated::{DomainSeparatedSponge, DomainSeparator};
-use crate::{Absorbable, CryptographicSponge, FieldElementSize};
+use crate::{Absorb, CryptographicSponge, FieldElementSize};
 use ark_ff::PrimeField;
 use ark_nonnative_field::NonNativeFieldVar;
 use ark_r1cs_std::bits::boolean::Boolean;
@@ -39,7 +39,7 @@ where
     fn try_separate_domain(&mut self) -> Result<(), SynthesisError> {
         if !self.domain_separated {
             let mut domain = D::domain();
-            let mut input = Absorbable::<CF>::to_sponge_bytes(&domain.len());
+            let mut input = Absorb::<CF>::to_sponge_bytes(&domain.len());
             input.append(&mut domain);
 
             let elems: Vec<CF> = input.to_sponge_field_elements();

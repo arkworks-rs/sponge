@@ -1,4 +1,4 @@
-use crate::{Absorbable, CryptographicSponge, FieldElementSize};
+use crate::{Absorb, CryptographicSponge, FieldElementSize};
 use ark_ff::PrimeField;
 use ark_std::marker::PhantomData;
 use ark_std::vec::Vec;
@@ -30,7 +30,7 @@ impl<CF: PrimeField, S: CryptographicSponge<CF>, D: DomainSeparator> Cryptograph
         let mut sponge = S::new();
 
         let mut domain = D::domain();
-        let mut input = Absorbable::<CF>::to_sponge_bytes(&domain.len());
+        let mut input = Absorb::<CF>::to_sponge_bytes(&domain.len());
         input.append(&mut domain);
         sponge.absorb(&input);
 
@@ -41,7 +41,7 @@ impl<CF: PrimeField, S: CryptographicSponge<CF>, D: DomainSeparator> Cryptograph
         }
     }
 
-    fn absorb(&mut self, input: &impl Absorbable<CF>) {
+    fn absorb(&mut self, input: &impl Absorb<CF>) {
         self.sponge.absorb(input);
     }
 

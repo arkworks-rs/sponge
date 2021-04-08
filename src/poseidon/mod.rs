@@ -1,4 +1,4 @@
-use crate::{Absorbable, CryptographicSponge, SpongeExt};
+use crate::{Absorb, CryptographicSponge, SpongeExt};
 use ark_ff::{BigInteger, FpParameters, PrimeField};
 use ark_std::vec;
 use ark_std::vec::Vec;
@@ -199,7 +199,7 @@ impl<F: PrimeField> CryptographicSponge<F> for PoseidonSponge<F> {
         }
     }
 
-    fn absorb(&mut self, input: &impl Absorbable<F>) {
+    fn absorb(&mut self, input: &impl Absorb<F>) {
         let elems = input.to_sponge_field_elements();
         if elems.is_empty() {
             return;
