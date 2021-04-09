@@ -17,15 +17,21 @@ pub trait DomainSeparator {
 /// objects but require domain separation. Operates in the same way as fork.
 #[derive(Derivative)]
 #[derivative(Clone(bound = "D: DomainSeparator"))]
-pub struct DomainSeparatedSponge<CF: PrimeField, S: CryptographicSponge<CF>, D: DomainSeparator> {
+pub struct DomainSeparatedSponge<
+    CF: PrimeField,
+    S: CryptographicSponge<CF = CF>,
+    D: DomainSeparator,
+> {
     sponge: S,
     _field_phantom: PhantomData<CF>,
     _domain_phantom: PhantomData<D>,
 }
 
-impl<CF: PrimeField, S: CryptographicSponge<CF>, D: DomainSeparator> CryptographicSponge<CF>
+impl<CF: PrimeField, S: CryptographicSponge<CF = CF>, D: DomainSeparator> CryptographicSponge
     for DomainSeparatedSponge<CF, S, D>
 {
+    type CF = CF;
+
     fn new() -> Self {
         let mut sponge = S::new();
 

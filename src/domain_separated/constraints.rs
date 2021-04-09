@@ -17,7 +17,7 @@ use ark_std::vec::Vec;
 #[derivative(Clone(bound = "D: DomainSeparator"))]
 pub struct DomainSeparatedSpongeVar<
     CF: PrimeField,
-    S: CryptographicSponge<CF>,
+    S: CryptographicSponge<CF = CF>,
     SV: CryptographicSpongeVar<CF, S>,
     D: DomainSeparator,
 > {
@@ -32,7 +32,7 @@ pub struct DomainSeparatedSpongeVar<
 impl<CF, S, SV, D> DomainSeparatedSpongeVar<CF, S, SV, D>
 where
     CF: PrimeField,
-    S: CryptographicSponge<CF>,
+    S: CryptographicSponge<CF = CF>,
     SV: CryptographicSpongeVar<CF, S>,
     D: DomainSeparator,
 {
@@ -60,7 +60,7 @@ impl<CF, S, SV, D> CryptographicSpongeVar<CF, DomainSeparatedSponge<CF, S, D>>
     for DomainSeparatedSpongeVar<CF, S, SV, D>
 where
     CF: PrimeField,
-    S: CryptographicSponge<CF>,
+    S: CryptographicSponge<CF = CF>,
     SV: CryptographicSpongeVar<CF, S>,
     D: DomainSeparator,
 {

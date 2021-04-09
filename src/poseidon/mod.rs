@@ -153,7 +153,9 @@ impl<F: PrimeField> PoseidonSponge<F> {
     }
 }
 
-impl<F: PrimeField> CryptographicSponge<F> for PoseidonSponge<F> {
+impl<F: PrimeField> CryptographicSponge for PoseidonSponge<F> {
+    type CF = F;
+
     fn new() -> Self {
         // Requires F to be Alt_Bn128Fr
         let full_rounds = 8;
@@ -285,7 +287,7 @@ pub struct PoseidonSpongeState<F: PrimeField> {
     mode: PoseidonSpongeMode,
 }
 
-impl<CF: PrimeField> SpongeExt<CF> for PoseidonSponge<CF> {
+impl<CF: PrimeField> SpongeExt for PoseidonSponge<CF> {
     type State = PoseidonSpongeState<CF>;
 
     fn from_state(state: Self::State) -> Self {

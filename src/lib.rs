@@ -66,12 +66,15 @@ impl FieldElementSize {
 /// The interface for a cryptographic sponge.
 /// A sponge can `absorb` or take in inputs and later `squeeze` or output bytes or field elements.
 /// The outputs are dependent on previous `absorb` and `squeeze` calls.
-pub trait CryptographicSponge<CF: PrimeField>: Clone {
+pub trait CryptographicSponge: Clone {
+    /// The native field used by the cryptographic sponge implementation.
+    type CF: PrimeField;
+
     /// Initialize a new instance of the sponge.
     fn new() -> Self;
 
     /// Absorb an input into the sponge.
-    fn absorb(&mut self, input: &impl Absorb<CF>);
+    fn absorb(&mut self, input: &impl Absorb<Self::CF>);
 
     /// Squeeze `num_bytes` bytes from the sponge.
     fn squeeze_bytes(&mut self, num_bytes: usize) -> Vec<u8>;
@@ -80,11 +83,11 @@ pub trait CryptographicSponge<CF: PrimeField>: Clone {
     fn squeeze_bits(&mut self, num_bits: usize) -> Vec<bool>;
 
     /// Squeeze `num_elements` field elements from the sponge.
-    fn squeeze_field_elements(&mut self, num_elements: usize) -> Vec<CF>;
+    fn squeeze_field_elements(&mut self, num_elements: usize) -> Vec<Self::CF>;
 
     /// Squeeze `sizes.len()` field elements from the sponge, where the `i`-th element of
     /// the output has size `sizes[i]`.
-    fn squeeze_field_elements_with_sizes(&mut self, sizes: &[FieldElementSize]) -> Vec<CF> {
+    fn squeeze_field_elements_with_sizes(&mut self, sizes: &[FieldElementSize]) -> Vec<Self::CF> {
         let mut all_full_sizes = true;
         for size in sizes {
             if *size != FieldElementSize::Full {
@@ -96,7 +99,7 @@ pub trait CryptographicSponge<CF: PrimeField>: Clone {
         if all_full_sizes {
             self.squeeze_field_elements(sizes.len())
         } else {
-            self.squeeze_nonnative_field_elements_with_sizes::<CF>(sizes)
+            self.squeeze_nonnative_field_elements_with_sizes::<Self::CF>(sizes)
         }
     }
 
@@ -154,7 +157,7 @@ pub trait CryptographicSponge<CF: PrimeField>: Clone {
     fn fork(&self, domain: &[u8]) -> Self {
         let mut new_sponge = self.clone();
 
-        let mut input = Absorb::<CF>::to_sponge_bytes(&domain.len());
+        let mut input = Absorb::<Self::CF>::to_sponge_bytes(&domain.len());
         input.extend_from_slice(domain);
         new_sponge.absorb(&input);
 
@@ -165,7 +168,7 @@ pub trait CryptographicSponge<CF: PrimeField>: Clone {
 /// An extension for the inferface of a cryptographic sponge.
 /// In addition to operations defined in `CryptographicSponge`, `SpongeExt` can convert itself to
 /// a state, and instantiate itself from state.
-pub trait SpongeExt<CF: PrimeField>: CryptographicSponge<CF> {
+pub trait SpongeExt: CryptographicSponge {
     /// The full state of the cryptographic sponge.
     type State: Clone;
     /// Returns a sponge that uses `state`.
