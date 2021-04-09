@@ -328,3 +328,65 @@ macro_rules! collect_sponge_field_elements {
         }
     };
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{Absorb, AbsorbWithLength};
+    use ark_ff::{One, PrimeField, UniformRand};
+    use ark_std::test_rng;
+    use ark_test_curves::bls12_381::Fr;
+
+    fn assert_different_encodings<F: PrimeField, A: Absorb<F>>(a: &A, b: &A) {
+        let bytes1 = a.to_sponge_bytes();
+        let bytes2 = b.to_sponge_bytes();
+
+        let field1 = a.to_sponge_field_elements();
+        let field2 = b.to_sponge_field_elements();
+
+        assert_ne!(bytes1, bytes2);
+        assert_ne!(field1, field2);
+    }
+
+    #[test]
+    fn single_field_element() {
+        let mut rng = test_rng();
+        let elem1 = Fr::rand(&mut rng);
+        let elem2 = elem1 + Fr::one();
+
+        assert_different_encodings(&elem1, &elem2)
+    }
+
+    #[test]
+    fn list_with_constant_size_element() {
+        let lst1 = vec![1u8, 2, 3, 4, 5, 6];
+        let lst2 = vec![2u8, 3, 4, 5, 6, 7];
+
+        assert_different_encodings::<Fr, _>(&lst1, &lst2)
+    }
+
+    struct VariableSizeList(Vec<u8>);
+
+    impl<F: PrimeField> Absorb<F> for VariableSizeList {
+        fn to_sponge_bytes(&self) -> Vec<u8> {
+            <Vec<u8> as AbsorbWithLength<F>>::to_sponge_bytes_with_length(&self.0)
+        }
+
+        fn to_sponge_field_elements(&self) -> Vec<F> {
+            <Vec<u8> as AbsorbWithLength<F>>::to_sponge_field_elements_with_length(&self.0)
+        }
+    }
+
+    #[test]
+    fn list_with_nonconstant_size_element() {
+        let lst1 = vec![
+            VariableSizeList(vec![1u8, 2, 3, 4]),
+            VariableSizeList(vec![5, 6]),
+        ];
+        let lst2 = vec![
+            VariableSizeList(vec![1u8, 2]),
+            VariableSizeList(vec![3, 4, 5, 6]),
+        ];
+
+        assert_different_encodings::<Fr, _>(&lst1, &lst2);
+    }
+}

@@ -25,6 +25,9 @@ ark-r1cs-std = { version = "^0.2.0", default-features = false, optional = true }
 ark-relations = { version = "^0.2.0", default-features = false, optional = true }
 tracing = { version = "0.1", default-features = false, features = [ "attributes" ], optional = true }
 
+[dev-dependencies]
+ark-test-curves = {version = "0.2.0", features = ["bls12_381_curve"]}
+
 [features]
 default = [ "r1cs", "std" ]
 r1cs = [ "ark-nonnative-field", "ark-relations", "ark-r1cs-std", "tracing" ]
