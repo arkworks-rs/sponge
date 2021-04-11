@@ -1,5 +1,4 @@
 #![cfg_attr(not(feature = "std"), no_std)]
-
 //! A crate for the cryptographic sponge trait.
 #![deny(
     const_err,

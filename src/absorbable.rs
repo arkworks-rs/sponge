@@ -333,8 +333,10 @@ macro_rules! collect_sponge_field_elements {
 mod tests {
     use crate::{Absorb, AbsorbWithLength};
     use ark_ff::{One, PrimeField, UniformRand};
+    use ark_std::any::TypeId;
     use ark_std::test_rng;
     use ark_test_curves::bls12_381::Fr;
+    use ark_test_curves::mnt4_753::Fr as MntFr;
 
     fn assert_different_encodings<F: PrimeField, A: Absorb<F>>(a: &A, b: &A) {
         let bytes1 = a.to_sponge_bytes();
@@ -388,5 +390,15 @@ mod tests {
         ];
 
         assert_different_encodings::<Fr, _>(&lst1, &lst2);
+    }
+
+    fn is_type_equal<F1: PrimeField, F2: PrimeField>() -> bool {
+        TypeId::of::<F1>() == TypeId::of::<F2>()
+    }
+
+    #[test]
+    fn test_type_equality() {
+        assert!(is_type_equal::<Fr, Fr>());
+        assert!(!is_type_equal::<Fr, MntFr>())
     }
 }
