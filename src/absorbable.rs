@@ -241,7 +241,7 @@ macro_rules! absorb {
 /// Quickly convert a list of different [`Absorbable`]s into sponge bytes.
 #[macro_export]
 macro_rules! collect_sponge_bytes {
-    ($type:ident, $head:expr $(, $tail:expr)* ) => {
+    ($type:ty, $head:expr $(, $tail:expr)* ) => {
         {
             let mut output = Absorbable::<$type>::to_sponge_bytes(&$head);
             $(
