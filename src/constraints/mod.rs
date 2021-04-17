@@ -162,10 +162,10 @@ pub trait CryptographicSpongeVar<CF: PrimeField, S: CryptographicSponge<CF = CF>
     fn fork(&self, domain: &[u8]) -> Result<Self, SynthesisError> {
         let mut new_sponge = self.clone();
 
-        let mut input = Absorb::<CF>::to_sponge_bytes(&domain.len());
+        let mut input = Absorb::to_sponge_bytes_as_vec(&domain.len());
         input.extend_from_slice(domain);
 
-        let elems: Vec<CF> = input.to_sponge_field_elements();
+        let elems: Vec<CF> = input.to_sponge_field_elements_as_vec();
         let elem_vars = elems
             .into_iter()
             .map(|elem| FpVar::Constant(elem))

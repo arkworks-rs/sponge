@@ -201,8 +201,8 @@ impl<F: PrimeField> CryptographicSponge for PoseidonSponge<F> {
         }
     }
 
-    fn absorb(&mut self, input: &impl Absorb<F>) {
-        let elems = input.to_sponge_field_elements();
+    fn absorb(&mut self, input: &impl Absorb) {
+        let elems = input.to_sponge_field_elements_as_vec::<F>();
         if elems.is_empty() {
             return;
         }

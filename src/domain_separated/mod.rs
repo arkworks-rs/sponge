@@ -36,7 +36,7 @@ impl<CF: PrimeField, S: CryptographicSponge<CF = CF>, D: DomainSeparator> Crypto
         let mut sponge = S::new();
 
         let mut domain = D::domain();
-        let mut input = Absorb::<CF>::to_sponge_bytes(&domain.len());
+        let mut input = Absorb::to_sponge_bytes_as_vec(&domain.len());
         input.append(&mut domain);
         sponge.absorb(&input);
 
@@ -47,7 +47,7 @@ impl<CF: PrimeField, S: CryptographicSponge<CF = CF>, D: DomainSeparator> Crypto
         }
     }
 
-    fn absorb(&mut self, input: &impl Absorb<CF>) {
+    fn absorb(&mut self, input: &impl Absorb) {
         self.sponge.absorb(input);
     }
 

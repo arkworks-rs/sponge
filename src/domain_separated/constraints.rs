@@ -39,10 +39,10 @@ where
     fn try_separate_domain(&mut self) -> Result<(), SynthesisError> {
         if !self.domain_separated {
             let mut domain = D::domain();
-            let mut input = Absorb::<CF>::to_sponge_bytes(&domain.len());
+            let mut input = Absorb::to_sponge_bytes_as_vec(&domain.len());
             input.append(&mut domain);
 
-            let elems: Vec<CF> = input.to_sponge_field_elements();
+            let elems: Vec<CF> = input.to_sponge_field_elements_as_vec();
             let elem_vars = elems
                 .into_iter()
                 .map(|elem| FpVar::Constant(elem))
