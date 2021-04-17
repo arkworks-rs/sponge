@@ -7,7 +7,9 @@ use ark_ff::models::{
     Fp832, Fp832Parameters,
 };
 use ark_ff::{to_bytes, PrimeField, ToBytes, ToConstraintField};
+use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ark_std::any::TypeId;
+use ark_std::ops::Deref;
 use ark_std::vec;
 use ark_std::vec::Vec;
 
@@ -83,12 +85,13 @@ pub trait Absorb {
 /// If `F1` equals to `F2`, return `x` as `F2`, otherwise panics.
 /// ## Panics
 /// This function will panic if `F1` is not equal to `F2`.
-fn field_cast<F1: PrimeField, F2: PrimeField>(x: F1) -> F2 {
+fn field_cast<F1: PrimeField, F2: PrimeField>(input: F1) -> F2 {
     if TypeId::of::<F1>() != TypeId::of::<F2>() {
         panic!("Try to absorb non-native field elements.")
     } else {
-        // TODO: Shall we use unsafe ark_std::mem::transmute for better performance here? This requires us to remove #![forbid(unsafe_code)]
-        F2::from_le_bytes_mod_order(&to_bytes!(x).unwrap())
+        let mut buf = Vec::new();
+        input.serialize_unchecked(&mut buf).unwrap();
+        F2::deserialize_unchecked(&buf[..]).unwrap()
     }
 }
 
@@ -99,11 +102,9 @@ fn batch_field_cast<F1: PrimeField, F2: PrimeField>(x: &[F1], dest: &mut Vec<F2>
     if TypeId::of::<F1>() != TypeId::of::<F2>() {
         panic!("Try to absorb non-native field elements.")
     } else {
-        // TODO: Shall we use unsafe ark_std::mem::transmute for better performance here? This requires us to remove #![forbid(unsafe_code)]
-        let casted = x
-            .iter()
-            .map(|&item| F2::from_le_bytes_mod_order(&to_bytes!(item).unwrap()));
-        dest.extend(casted)
+        let mut buf = Vec::new();
+        x.serialize_unchecked(&mut buf).unwrap();
+        dest.extend(Vec::<F2>::deserialize_unchecked(&buf[..]).unwrap())
     }
 }
 
@@ -365,8 +366,10 @@ mod tests {
 
     #[test]
     fn list_with_constant_size_element() {
-        let lst1 = vec![1u8, 2, 3, 4, 5, 6];
-        let lst2 = vec![2u8, 3, 4, 5, 6, 7];
+        let mut rng = test_rng();
+        let lst1: Vec<_> = (0..1024 * 8).map(|_| Fr::rand(&mut rng)).collect();
+        let mut lst2 = lst1.to_vec();
+        lst2[3] += Fr::one();
 
         assert_different_encodings::<Fr, _>(&lst1, &lst2)
     }

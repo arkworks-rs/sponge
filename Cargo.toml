@@ -13,6 +13,7 @@ panic = 'abort'
 [dependencies]
 ark-ec = { version = "^0.2.0", default_features = false }
 ark-ff = { version = "^0.2.0", default_features = false }
+ark-serialize = { version = "0.2.0", default_features = false}
 ark-std = { version = "^0.2.0", default-features = false }
 derivative = { version = "2.1.1", features = [ "use_core" ] }
 digest = { version = "0.9.0", default_features = false }
@@ -31,4 +32,4 @@ ark-test-curves = {version = "0.2.0", features = ["bls12_381_curve", "mnt4_753_c
 [features]
 default = [ "r1cs", "std" ]
 r1cs = [ "ark-nonnative-field", "ark-relations", "ark-r1cs-std", "tracing" ]
-std = [ "ark-ec/std", "ark-ff/std", "ark-nonnative-field/std", "ark-r1cs-std/std", "ark-relations/std", "ark-std/std" ]
+std = [ "ark-ec/std", "ark-ff/std", "ark-nonnative-field/std", "ark-r1cs-std/std", "ark-relations/std", "ark-std/std", "ark-serialize/std" ]
