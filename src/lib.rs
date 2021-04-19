@@ -140,6 +140,7 @@ pub trait CryptographicSponge: Clone {
     }
 }
 
+/// The interface for field-based cryptographic sponge.
 pub trait FieldBasedCryptographicSponge: CryptographicSponge {
     /// The native field used by the cryptographic sponge implementation.
     type CF: PrimeField;
