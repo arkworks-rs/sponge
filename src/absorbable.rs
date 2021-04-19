@@ -6,7 +6,7 @@ use ark_ff::models::{
     Fp256, Fp256Parameters, Fp320, Fp320Parameters, Fp384, Fp384Parameters, Fp768, Fp768Parameters,
     Fp832, Fp832Parameters,
 };
-use ark_ff::{to_bytes, Field, PrimeField, ToBytes, ToConstraintField};
+use ark_ff::{to_bytes, PrimeField, ToBytes, ToConstraintField};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ark_std::any::TypeId;
 use ark_std::ops::Deref;
@@ -82,10 +82,32 @@ pub trait Absorb {
     }
 }
 
+/// An extension to `Absorb` that is specific to item with variable length, such as a list.
+pub trait AbsorbWithLength: Absorb {
+    /// The length of the `self` being absorbed.
+    fn absorb_length(&self) -> usize;
+
+    /// Converts the object into a list of bytes along with its length information
+    /// that can be absorbed by a `CryptographicSponge`.
+    /// Append the list to `dest`.
+    fn to_sponge_bytes_with_length(&self, dest: &mut Vec<u8>) {
+        self.absorb_length().to_sponge_bytes(dest);
+        self.to_sponge_bytes(dest)
+    }
+
+    /// Converts the object into field elements along with its length information
+    /// that can be absorbed by a `CryptographicSponge`.
+    /// Append the list to `dest`
+    fn to_sponge_field_elements_with_length<F: PrimeField>(&self, dest: &mut Vec<F>) {
+        self.absorb_length().to_sponge_field_elements(dest);
+        <Self as Absorb>::to_sponge_field_elements(&self, dest)
+    }
+}
+
 /// If `F1` equals to `F2`, return `x` as `F2`, otherwise panics.
 /// ## Panics
 /// This function will panic if `F1` is not equal to `F2`.
-fn field_cast<F1: Field, F2: Field>(input: F1) -> F2 {
+fn field_cast<F1: PrimeField, F2: PrimeField>(input: F1) -> F2 {
     if TypeId::of::<F1>() != TypeId::of::<F2>() {
         panic!("Try to absorb non-native field elements.")
     } else {
@@ -98,7 +120,7 @@ fn field_cast<F1: Field, F2: Field>(input: F1) -> F2 {
 /// If `F1` equals to `F2`, add all elements of x as `F2` to `dest`, otherwise panics.
 /// ## Panics
 /// This function will panic if `F1` is not equal to `F2`.
-fn batch_field_cast<F1: Field, F2: Field>(x: &[F1], dest: &mut Vec<F2>) {
+fn batch_field_cast<F1: PrimeField, F2: PrimeField>(x: &[F1], dest: &mut Vec<F2>) {
     if TypeId::of::<F1>() != TypeId::of::<F2>() {
         panic!("Try to absorb non-native field elements.")
     } else {
@@ -228,26 +250,23 @@ impl Absorb for isize {
     }
 }
 
-// TODO: I will implement absorb for those later.
-impl<P: TEModelParameters> Absorb for TEAffine<P> {
+impl<CF: PrimeField, P: TEModelParameters<BaseField = CF>> Absorb for TEAffine<P> {
     fn to_sponge_bytes(&self, dest: &mut Vec<u8>) {
         self.write(dest).unwrap()
     }
 
     fn to_sponge_field_elements<F: PrimeField>(&self, dest: &mut Vec<F>) {
-        // todo: is this ok?
-        batch_field_cast::<P::BaseField, _>(&[self.x, self.y], dest);
+        batch_field_cast::<P::BaseField, _>(&self.to_field_elements().unwrap(), dest);
     }
 }
 
-impl<P: SWModelParameters> Absorb for SWAffine<P> {
+impl<CF: PrimeField, P: SWModelParameters<BaseField = CF>> Absorb for SWAffine<P> {
     fn to_sponge_bytes(&self, dest: &mut Vec<u8>) {
         self.write(dest).unwrap()
     }
 
     fn to_sponge_field_elements<F: PrimeField>(&self, dest: &mut Vec<F>) {
-        // todo: is this ok?
-        batch_field_cast::<P::BaseField, _>(&[self.x, self.y], dest);
+        batch_field_cast::<P::BaseField, _>(&self.to_field_elements().unwrap(), dest);
     }
 }
 
@@ -261,6 +280,12 @@ impl<A: Absorb> Absorb for &[A] {
     }
 }
 
+impl<A: Absorb> AbsorbWithLength for &[A] {
+    fn absorb_length(&self) -> usize {
+        self.len()
+    }
+}
+
 impl<A: Absorb> Absorb for Vec<A> {
     fn to_sponge_bytes(&self, dest: &mut Vec<u8>) {
         self.as_slice().to_sponge_bytes(dest)
@@ -268,6 +293,12 @@ impl<A: Absorb> Absorb for Vec<A> {
 
     fn to_sponge_field_elements<F: PrimeField>(&self, dest: &mut Vec<F>) {
         self.as_slice().to_sponge_field_elements(dest)
+    }
+}
+
+impl<A: Absorb> AbsorbWithLength for Vec<A> {
+    fn absorb_length(&self) -> usize {
+        self.as_slice().len()
     }
 }
 
