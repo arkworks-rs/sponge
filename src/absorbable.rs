@@ -370,7 +370,7 @@ macro_rules! collect_sponge_field_elements {
 
 #[cfg(test)]
 mod tests {
-    use crate::Absorb;
+    use crate::{Absorb, AbsorbWithLength};
     use ark_ff::{One, PrimeField, UniformRand};
     use ark_std::any::TypeId;
     use ark_std::test_rng;
@@ -407,39 +407,29 @@ mod tests {
         assert_different_encodings::<Fr, _>(&lst1, &lst2)
     }
 
-    // struct VariableSizeList(Vec<u8>);
-    //
-    // impl<F: PrimeField> Absorb<F> for VariableSizeList {
-    //     fn to_sponge_bytes(&self) -> Vec<u8> {
-    //         <Vec<u8> as AbsorbWithLength<F>>::to_sponge_bytes_with_length(&self.0)
-    //     }
-    //
-    //     fn to_sponge_field_elements(&self) -> Vec<F> {
-    //         <Vec<u8> as AbsorbWithLength<F>>::to_sponge_field_elements_with_length(&self.0)
-    //     }
-    // }
-    //
-    // #[test]
-    // fn list_with_nonconstant_size_element() {
-    //     let lst1 = vec![
-    //         VariableSizeList(vec![1u8, 2, 3, 4]),
-    //         VariableSizeList(vec![5, 6]),
-    //     ];
-    //     let lst2 = vec![
-    //         VariableSizeList(vec![1u8, 2]),
-    //         VariableSizeList(vec![3, 4, 5, 6]),
-    //     ];
-    //
-    //     assert_different_encodings::<Fr, _>(&lst1, &lst2);
-    // }
-    //
-    // fn is_type_equal<F1: PrimeField, F2: PrimeField>() -> bool {
-    //     TypeId::of::<F1>() == TypeId::of::<F2>()
-    // }
-    //
-    // #[test]
-    // fn test_type_equality() {
-    //     assert!(is_type_equal::<Fr, Fr>());
-    //     assert!(!is_type_equal::<Fr, MntFr>())
-    // }
+    struct VariableSizeList(Vec<u8>);
+
+    impl Absorb for VariableSizeList {
+        fn to_sponge_bytes(&self, dest: &mut Vec<u8>) {
+            self.0.to_sponge_bytes_with_length(dest)
+        }
+
+        fn to_sponge_field_elements<F: PrimeField>(&self, dest: &mut Vec<F>) {
+            self.0.to_sponge_field_elements_with_length(dest)
+        }
+    }
+
+    #[test]
+    fn list_with_nonconstant_size_element() {
+        let lst1 = vec![
+            VariableSizeList(vec![1u8, 2, 3, 4]),
+            VariableSizeList(vec![5, 6]),
+        ];
+        let lst2 = vec![
+            VariableSizeList(vec![1u8, 2]),
+            VariableSizeList(vec![3, 4, 5, 6]),
+        ];
+
+        assert_different_encodings::<Fr, _>(&lst1, &lst2);
+    }
 }
