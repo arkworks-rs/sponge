@@ -6,7 +6,7 @@ use ark_ff::models::{
     Fp256, Fp256Parameters, Fp320, Fp320Parameters, Fp384, Fp384Parameters, Fp768, Fp768Parameters,
     Fp832, Fp832Parameters,
 };
-use ark_ff::{to_bytes, PrimeField, ToBytes, ToConstraintField};
+use ark_ff::{to_bytes, Field, PrimeField, ToBytes, ToConstraintField};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ark_std::any::TypeId;
 use ark_std::ops::Deref;
@@ -85,7 +85,7 @@ pub trait Absorb {
 /// If `F1` equals to `F2`, return `x` as `F2`, otherwise panics.
 /// ## Panics
 /// This function will panic if `F1` is not equal to `F2`.
-fn field_cast<F1: PrimeField, F2: PrimeField>(input: F1) -> F2 {
+fn field_cast<F1: Field, F2: Field>(input: F1) -> F2 {
     if TypeId::of::<F1>() != TypeId::of::<F2>() {
         panic!("Try to absorb non-native field elements.")
     } else {
@@ -98,7 +98,7 @@ fn field_cast<F1: PrimeField, F2: PrimeField>(input: F1) -> F2 {
 /// If `F1` equals to `F2`, add all elements of x as `F2` to `dest`, otherwise panics.
 /// ## Panics
 /// This function will panic if `F1` is not equal to `F2`.
-fn batch_field_cast<F1: PrimeField, F2: PrimeField>(x: &[F1], dest: &mut Vec<F2>) {
+fn batch_field_cast<F1: Field, F2: Field>(x: &[F1], dest: &mut Vec<F2>) {
     if TypeId::of::<F1>() != TypeId::of::<F2>() {
         panic!("Try to absorb non-native field elements.")
     } else {
@@ -229,25 +229,27 @@ impl Absorb for isize {
 }
 
 // TODO: I will implement absorb for those later.
-// impl<P: TEModelParameters> Absorb for TEAffine<P> {
-//     fn to_sponge_bytes(&self, dest: &mut Vec<u8>) {
-//         self.write(dest).unwrap()
-//     }
-//
-//     fn to_sponge_field_elements<F: PrimeField>(&self, dest: &mut Vec<F>) {
-//         dest.extend(self.to_field_elements().unwrap())
-//     }
-// }
-//
-// impl<P: SWModelParameters> Absorb for SWAffine<P> {
-//     fn to_sponge_bytes(&self, dest: &mut Vec<u8>) {
-//         self.write(dest).unwrap()
-//     }
-//
-//     fn to_sponge_field_elements<F: PrimeField>(&self, dest: &mut Vec<F>) {
-//         dest.extend(self.to_field_elements().unwrap())
-//     }
-// }
+impl<P: TEModelParameters> Absorb for TEAffine<P> {
+    fn to_sponge_bytes(&self, dest: &mut Vec<u8>) {
+        self.write(dest).unwrap()
+    }
+
+    fn to_sponge_field_elements<F: PrimeField>(&self, dest: &mut Vec<F>) {
+        // todo: is this ok?
+        batch_field_cast::<P::BaseField, _>(&[self.x, self.y], dest);
+    }
+}
+
+impl<P: SWModelParameters> Absorb for SWAffine<P> {
+    fn to_sponge_bytes(&self, dest: &mut Vec<u8>) {
+        self.write(dest).unwrap()
+    }
+
+    fn to_sponge_field_elements<F: PrimeField>(&self, dest: &mut Vec<F>) {
+        // todo: is this ok?
+        batch_field_cast::<P::BaseField, _>(&[self.x, self.y], dest);
+    }
+}
 
 impl<A: Absorb> Absorb for &[A] {
     fn to_sponge_bytes(&self, dest: &mut Vec<u8>) {
