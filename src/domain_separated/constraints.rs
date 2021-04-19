@@ -1,7 +1,7 @@
 use crate::constraints::AbsorbableGadget;
 use crate::constraints::CryptographicSpongeVar;
 use crate::domain_separated::{DomainSeparatedSponge, DomainSeparator};
-use crate::{Absorb, CryptographicSponge, FieldElementSize};
+use crate::{Absorb, FieldBasedCryptographicSponge, FieldElementSize};
 use ark_ff::PrimeField;
 use ark_nonnative_field::NonNativeFieldVar;
 use ark_r1cs_std::bits::boolean::Boolean;
@@ -17,7 +17,7 @@ use ark_std::vec::Vec;
 #[derivative(Clone(bound = "D: DomainSeparator"))]
 pub struct DomainSeparatedSpongeVar<
     CF: PrimeField,
-    S: CryptographicSponge<CF = CF>,
+    S: FieldBasedCryptographicSponge<CF = CF>,
     SV: CryptographicSpongeVar<CF, S>,
     D: DomainSeparator,
 > {
@@ -32,7 +32,7 @@ pub struct DomainSeparatedSpongeVar<
 impl<CF, S, SV, D> DomainSeparatedSpongeVar<CF, S, SV, D>
 where
     CF: PrimeField,
-    S: CryptographicSponge<CF = CF>,
+    S: FieldBasedCryptographicSponge<CF = CF>,
     SV: CryptographicSpongeVar<CF, S>,
     D: DomainSeparator,
 {
@@ -56,11 +56,11 @@ where
     }
 }
 
-impl<CF, S, SV, D> CryptographicSpongeVar<CF, DomainSeparatedSponge<CF, S, D>>
+impl<CF, S, SV, D> CryptographicSpongeVar<CF, DomainSeparatedSponge<S, D>>
     for DomainSeparatedSpongeVar<CF, S, SV, D>
 where
     CF: PrimeField,
-    S: CryptographicSponge<CF = CF>,
+    S: FieldBasedCryptographicSponge<CF = CF>,
     SV: CryptographicSpongeVar<CF, S>,
     D: DomainSeparator,
 {

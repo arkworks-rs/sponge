@@ -1,4 +1,4 @@
-use crate::{Absorb, CryptographicSponge, SpongeExt};
+use crate::{Absorb, CryptographicSponge, FieldBasedCryptographicSponge, SpongeExt};
 use ark_ff::{BigInteger, FpParameters, PrimeField};
 use ark_std::vec;
 use ark_std::vec::Vec;
@@ -154,8 +154,6 @@ impl<F: PrimeField> PoseidonSponge<F> {
 }
 
 impl<F: PrimeField> CryptographicSponge for PoseidonSponge<F> {
-    type CF = F;
-
     fn new() -> Self {
         // Requires F to be Alt_Bn128Fr
         let full_rounds = 8;
@@ -229,7 +227,7 @@ impl<F: PrimeField> CryptographicSponge for PoseidonSponge<F> {
         let usable_bytes = (F::Params::CAPACITY / 8) as usize;
 
         let num_elements = (num_bytes + usable_bytes - 1) / usable_bytes;
-        let src_elements = self.squeeze_field_elements(num_elements);
+        let src_elements = self.squeeze_native_field_elements(num_elements);
 
         let mut bytes: Vec<u8> = Vec::with_capacity(usable_bytes * num_elements);
         for elem in &src_elements {
@@ -245,7 +243,7 @@ impl<F: PrimeField> CryptographicSponge for PoseidonSponge<F> {
         let usable_bits = F::Params::CAPACITY as usize;
 
         let num_elements = (num_bits + usable_bits - 1) / usable_bits;
-        let src_elements = self.squeeze_field_elements(num_elements);
+        let src_elements = self.squeeze_native_field_elements(num_elements);
 
         let mut bits: Vec<bool> = Vec::with_capacity(usable_bits * num_elements);
         for elem in &src_elements {
@@ -256,8 +254,12 @@ impl<F: PrimeField> CryptographicSponge for PoseidonSponge<F> {
         bits.truncate(num_bits);
         bits
     }
+}
 
-    fn squeeze_field_elements(&mut self, num_elements: usize) -> Vec<F> {
+impl<F: PrimeField> FieldBasedCryptographicSponge for PoseidonSponge<F> {
+    type CF = F;
+
+    fn squeeze_native_field_elements(&mut self, num_elements: usize) -> Vec<F> {
         let mut squeezed_elems = vec![F::zero(); num_elements];
         match self.mode {
             PoseidonSpongeMode::Absorbing {

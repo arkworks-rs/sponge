@@ -1,4 +1,4 @@
-use crate::{Absorb, CryptographicSponge, FieldElementSize};
+use crate::{Absorb, FieldBasedCryptographicSponge, FieldElementSize};
 use ark_ff::PrimeField;
 use ark_nonnative_field::params::{get_params, OptimizationType};
 use ark_nonnative_field::{AllocatedNonNativeFieldVar, NonNativeFieldVar};
@@ -91,7 +91,9 @@ pub fn bits_le_to_nonnative<'a, F: PrimeField, CF: PrimeField>(
 /// The interface for a cryptographic sponge.
 /// A sponge can `absorb` or take in inputs and later `squeeze` or output bytes or field elements.
 /// The outputs are dependent on previous `absorb` and `squeeze` calls.
-pub trait CryptographicSpongeVar<CF: PrimeField, S: CryptographicSponge<CF = CF>>: Clone {
+pub trait CryptographicSpongeVar<CF: PrimeField, S: FieldBasedCryptographicSponge<CF = CF>>:
+    Clone
+{
     /// Initialize a new instance of the sponge.
     fn new(cs: ConstraintSystemRef<CF>) -> Self;
 

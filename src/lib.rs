@@ -66,9 +66,6 @@ impl FieldElementSize {
 /// A sponge can `absorb` or take in inputs and later `squeeze` or output bytes or field elements.
 /// The outputs are dependent on previous `absorb` and `squeeze` calls.
 pub trait CryptographicSponge: Clone {
-    /// The native field used by the cryptographic sponge implementation.
-    type CF: PrimeField;
-
     /// Initialize a new instance of the sponge.
     fn new() -> Self;
 
@@ -80,27 +77,6 @@ pub trait CryptographicSponge: Clone {
 
     /// Squeeze `num_bits` bits from the sponge.
     fn squeeze_bits(&mut self, num_bits: usize) -> Vec<bool>;
-
-    /// Squeeze `num_elements` field elements from the sponge.
-    fn squeeze_field_elements(&mut self, num_elements: usize) -> Vec<Self::CF>;
-
-    /// Squeeze `sizes.len()` field elements from the sponge, where the `i`-th element of
-    /// the output has size `sizes[i]`.
-    fn squeeze_field_elements_with_sizes(&mut self, sizes: &[FieldElementSize]) -> Vec<Self::CF> {
-        let mut all_full_sizes = true;
-        for size in sizes {
-            if *size != FieldElementSize::Full {
-                all_full_sizes = false;
-                break;
-            }
-        }
-
-        if all_full_sizes {
-            self.squeeze_field_elements(sizes.len())
-        } else {
-            self.squeeze_nonnative_field_elements_with_sizes::<Self::CF>(sizes)
-        }
-    }
 
     /// Squeeze `sizes.len()` nonnative field elements from the sponge, where the `i`-th element of
     /// the output has size `sizes[i]`.
@@ -161,6 +137,35 @@ pub trait CryptographicSponge: Clone {
         new_sponge.absorb(&input);
 
         new_sponge
+    }
+}
+
+pub trait FieldBasedCryptographicSponge: CryptographicSponge {
+    /// The native field used by the cryptographic sponge implementation.
+    type CF: PrimeField;
+
+    /// Squeeze `num_elements` field elements from the sponge.
+    fn squeeze_native_field_elements(&mut self, num_elements: usize) -> Vec<Self::CF>;
+
+    /// Squeeze `sizes.len()` field elements from the sponge, where the `i`-th element of
+    /// the output has size `sizes[i]`.
+    fn squeeze_native_field_elements_with_sizes(
+        &mut self,
+        sizes: &[FieldElementSize],
+    ) -> Vec<Self::CF> {
+        let mut all_full_sizes = true;
+        for size in sizes {
+            if *size != FieldElementSize::Full {
+                all_full_sizes = false;
+                break;
+            }
+        }
+
+        if all_full_sizes {
+            self.squeeze_native_field_elements(sizes.len())
+        } else {
+            self.squeeze_nonnative_field_elements_with_sizes::<Self::CF>(sizes)
+        }
     }
 }
 

@@ -1,4 +1,4 @@
-use crate::{Absorb, CryptographicSponge, FieldElementSize};
+use crate::{Absorb, CryptographicSponge, FieldBasedCryptographicSponge, FieldElementSize};
 use ark_ff::PrimeField;
 use ark_std::marker::PhantomData;
 use ark_std::vec::Vec;
@@ -17,21 +17,14 @@ pub trait DomainSeparator {
 /// objects but require domain separation. Operates in the same way as fork.
 #[derive(Derivative)]
 #[derivative(Clone(bound = "D: DomainSeparator"))]
-pub struct DomainSeparatedSponge<
-    CF: PrimeField,
-    S: CryptographicSponge<CF = CF>,
-    D: DomainSeparator,
-> {
+pub struct DomainSeparatedSponge<S: CryptographicSponge, D: DomainSeparator> {
     sponge: S,
-    _field_phantom: PhantomData<CF>,
     _domain_phantom: PhantomData<D>,
 }
 
-impl<CF: PrimeField, S: CryptographicSponge<CF = CF>, D: DomainSeparator> CryptographicSponge
-    for DomainSeparatedSponge<CF, S, D>
+impl<S: CryptographicSponge, D: DomainSeparator> CryptographicSponge
+    for DomainSeparatedSponge<S, D>
 {
-    type CF = CF;
-
     fn new() -> Self {
         let mut sponge = S::new();
 
@@ -42,7 +35,6 @@ impl<CF: PrimeField, S: CryptographicSponge<CF = CF>, D: DomainSeparator> Crypto
 
         Self {
             sponge,
-            _field_phantom: PhantomData,
             _domain_phantom: PhantomData,
         }
     }
@@ -59,14 +51,6 @@ impl<CF: PrimeField, S: CryptographicSponge<CF = CF>, D: DomainSeparator> Crypto
         self.sponge.squeeze_bits(num_bits)
     }
 
-    fn squeeze_field_elements(&mut self, num_elements: usize) -> Vec<CF> {
-        self.sponge.squeeze_field_elements(num_elements)
-    }
-
-    fn squeeze_field_elements_with_sizes(&mut self, sizes: &[FieldElementSize]) -> Vec<CF> {
-        self.sponge.squeeze_field_elements_with_sizes(sizes)
-    }
-
     fn squeeze_nonnative_field_elements_with_sizes<F: PrimeField>(
         &mut self,
         sizes: &[FieldElementSize],
@@ -77,5 +61,22 @@ impl<CF: PrimeField, S: CryptographicSponge<CF = CF>, D: DomainSeparator> Crypto
 
     fn squeeze_nonnative_field_elements<F: PrimeField>(&mut self, num_elements: usize) -> Vec<F> {
         self.sponge.squeeze_nonnative_field_elements(num_elements)
+    }
+}
+
+impl<S: FieldBasedCryptographicSponge, D: DomainSeparator> FieldBasedCryptographicSponge
+    for DomainSeparatedSponge<S, D>
+{
+    type CF = S::CF;
+
+    fn squeeze_native_field_elements(&mut self, num_elements: usize) -> Vec<Self::CF> {
+        self.sponge.squeeze_native_field_elements(num_elements)
+    }
+
+    fn squeeze_native_field_elements_with_sizes(
+        &mut self,
+        sizes: &[FieldElementSize],
+    ) -> Vec<Self::CF> {
+        self.sponge.squeeze_native_field_elements_with_sizes(sizes)
     }
 }
