@@ -109,11 +109,9 @@ pub trait AbsorbWithLength: Absorb {
 /// This function will panic if `F1` is not equal to `F2`.
 fn field_cast<F1: PrimeField, F2: PrimeField>(input: F1) -> F2 {
     if TypeId::of::<F1>() != TypeId::of::<F2>() {
-        panic!("Try to absorb non-native field elements.")
+        panic!("Trying to absorb non-native field elements.")
     } else {
-        let mut buf = Vec::new();
-        input.serialize_unchecked(&mut buf).unwrap();
-        F2::deserialize_unchecked(&buf[..]).unwrap()
+        F2::from_le_bytes_mod_order(&to_bytes!(input).unwrap())
     }
 }
 
@@ -122,11 +120,10 @@ fn field_cast<F1: PrimeField, F2: PrimeField>(input: F1) -> F2 {
 /// This function will panic if `F1` is not equal to `F2`.
 fn batch_field_cast<F1: PrimeField, F2: PrimeField>(x: &[F1], dest: &mut Vec<F2>) {
     if TypeId::of::<F1>() != TypeId::of::<F2>() {
-        panic!("Try to absorb non-native field elements.")
+        panic!("Trying to absorb non-native field elements.")
     } else {
-        let mut buf = Vec::new();
-        x.serialize_unchecked(&mut buf).unwrap();
-        dest.extend(Vec::<F2>::deserialize_unchecked(&buf[..]).unwrap())
+        x.iter()
+            .for_each(|item| dest.push(F2::from_le_bytes_mod_order(&to_bytes!(item).unwrap())))
     }
 }
 
@@ -370,7 +367,8 @@ macro_rules! collect_sponge_field_elements {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Absorb, AbsorbWithLength};
+    use crate::poseidon::PoseidonSponge;
+    use crate::{Absorb, AbsorbWithLength, CryptographicSponge, FieldBasedCryptographicSponge};
     use ark_ff::{One, PrimeField, UniformRand};
     use ark_std::any::TypeId;
     use ark_std::test_rng;
@@ -380,12 +378,18 @@ mod tests {
     fn assert_different_encodings<F: PrimeField, A: Absorb>(a: &A, b: &A) {
         let bytes1 = a.to_sponge_bytes_as_vec();
         let bytes2 = b.to_sponge_bytes_as_vec();
-
-        let field1 = a.to_sponge_field_elements_as_vec::<F>();
-        let field2 = b.to_sponge_field_elements_as_vec::<F>();
-
         assert_ne!(bytes1, bytes2);
-        assert_ne!(field1, field2);
+
+        let mut sponge1 = PoseidonSponge::<F>::new();
+        let mut sponge2 = PoseidonSponge::<F>::new();
+
+        sponge1.absorb(&a);
+        sponge2.absorb(&b);
+
+        assert_ne!(
+            sponge1.squeeze_native_field_elements(3),
+            sponge2.squeeze_native_field_elements(3)
+        );
     }
 
     #[test]
@@ -400,11 +404,21 @@ mod tests {
     #[test]
     fn list_with_constant_size_element() {
         let mut rng = test_rng();
-        let lst1: Vec<_> = (0..1024 * 8).map(|_| Fr::rand(&mut rng)).collect();
+        let lst1: Vec<_> = (0..1024).map(|_| Fr::rand(&mut rng)).collect();
         let mut lst2 = lst1.to_vec();
         lst2[3] += Fr::one();
 
         assert_different_encodings::<Fr, _>(&lst1, &lst2)
+    }
+
+    #[test]
+    #[should_panic]
+    fn absorb_nonnative_field_should_panic() {
+        let mut rng = test_rng();
+        let mut non_native_elem = MntFr::rand(&mut rng);
+        let mut non_native_elem2 = MntFr::rand(&mut rng);
+
+        assert_different_encodings::<Fr, _>(&non_native_elem, &non_native_elem2);
     }
 
     struct VariableSizeList(Vec<u8>);
