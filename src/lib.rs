@@ -83,6 +83,8 @@ pub trait CryptographicSponge: Clone {
     ///
     /// If the implementation is field-based, to squeeze native field elements,
     /// call `self.squeeze_native_field_elements` instead.
+    ///
+    /// TODO: Shall we return `Vec<Vec<bool>>`, which represents the underlying bits as well?
     fn squeeze_field_elements_with_sizes<F: PrimeField>(
         &mut self,
         sizes: &[FieldElementSize],
