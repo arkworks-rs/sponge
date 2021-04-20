@@ -106,25 +106,33 @@ impl<F: PrimeField> PoseidonSponge<F> {
 
     // Absorbs everything in elements, this does not end in an absorbtion.
     fn absorb_internal(&mut self, rate_start_index: usize, elements: &[F]) {
-        // if we can finish in this call
-        if rate_start_index + elements.len() <= self.rate {
-            for (i, element) in elements.iter().enumerate() {
+        let mut remaining_elements = elements;
+
+        loop {
+            // if we can finish in this call
+            if rate_start_index + remaining_elements.len() <= self.rate {
+                for (i, element) in remaining_elements.iter().enumerate() {
+                    self.state[i + rate_start_index] += element;
+                }
+                self.mode = PoseidonSpongeMode::Absorbing {
+                    next_absorb_index: rate_start_index + remaining_elements.len(),
+                };
+
+                return;
+            }
+            // otherwise absorb (rate - rate_start_index) elements
+            let num_elements_absorbed = self.rate - rate_start_index;
+            for (i, element) in remaining_elements
+                .iter()
+                .enumerate()
+                .take(num_elements_absorbed)
+            {
                 self.state[i + rate_start_index] += element;
             }
-            self.mode = PoseidonSpongeMode::Absorbing {
-                next_absorb_index: rate_start_index + elements.len(),
-            };
-
-            return;
+            self.permute();
+            // the input elements got truncated by num elements absorbed
+            remaining_elements = &remaining_elements[num_elements_absorbed..];
         }
-        // otherwise absorb (rate - rate_start_index) elements
-        let num_elements_absorbed = self.rate - rate_start_index;
-        for (i, element) in elements.iter().enumerate().take(num_elements_absorbed) {
-            self.state[i + rate_start_index] += element;
-        }
-        self.permute();
-        // Tail recurse, with the input elements being truncated by num elements absorbed
-        self.absorb_internal(0, &elements[num_elements_absorbed..]);
     }
 
     // Squeeze |output| many elements. This does not end in a squeeze

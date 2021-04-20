@@ -404,7 +404,7 @@ mod tests {
     #[test]
     fn list_with_constant_size_element() {
         let mut rng = test_rng();
-        let lst1: Vec<_> = (0..1024).map(|_| Fr::rand(&mut rng)).collect();
+        let lst1: Vec<_> = (0..1024 * 8).map(|_| Fr::rand(&mut rng)).collect();
         let mut lst2 = lst1.to_vec();
         lst2[3] += Fr::one();
 
