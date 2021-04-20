@@ -344,7 +344,7 @@ macro_rules! collect_sponge_bytes {
         {
             let mut output = Absorb::to_sponge_bytes_as_vec(&$head);
             $(
-                Absorb::to_sponge_bytes(&$tail, output);
+                Absorb::to_sponge_bytes(&$tail, &mut output);
             )*
             output
         }
@@ -358,7 +358,7 @@ macro_rules! collect_sponge_field_elements {
         {
             let mut output = Absorb::to_sponge_field_elements_as_vec(&$head);
             $(
-               Absorb::to_sponge_field_elements(&$tail, output);
+               Absorb::to_sponge_field_elements(&$tail, &mut output);
             )*
             output
         }
@@ -445,5 +445,37 @@ mod tests {
         ];
 
         assert_different_encodings::<Fr, _>(&lst1, &lst2);
+    }
+
+    #[test]
+    fn test_macros() {
+        let mut sponge1 = PoseidonSponge::<Fr>::new();
+        sponge1.absorb(&vec![1, 2, 3, 4, 5, 6]);
+        sponge1.absorb(&Fr::from(114514u128));
+
+        let mut sponge2 = PoseidonSponge::<Fr>::new();
+        absorb!(&mut sponge2, vec![1, 2, 3, 4, 5, 6], Fr::from(114514u128));
+
+        let expected = sponge1.squeeze_native_field_elements(3);
+        let actual = sponge2.squeeze_native_field_elements(3);
+
+        assert_eq!(actual, expected);
+
+        let mut expected = Vec::new();
+        vec![6, 5, 4, 3, 2, 1].to_sponge_bytes(&mut expected);
+        Fr::from(42u8).to_sponge_bytes(&mut expected);
+
+        let actual = collect_sponge_bytes!(vec![6, 5, 4, 3, 2, 1], Fr::from(42u8));
+
+        assert_eq!(actual, expected);
+
+        let mut expected: Vec<Fr> = Vec::new();
+        vec![6, 5, 4, 3, 2, 1].to_sponge_field_elements(&mut expected);
+        Fr::from(42u8).to_sponge_field_elements(&mut expected);
+
+        let actual: Vec<Fr> =
+            collect_sponge_field_elements!(vec![6, 5, 4, 3, 2, 1], Fr::from(42u8));
+
+        assert_eq!(actual, expected);
     }
 }
