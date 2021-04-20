@@ -78,9 +78,12 @@ pub trait CryptographicSponge: Clone {
     /// Squeeze `num_bits` bits from the sponge.
     fn squeeze_bits(&mut self, num_bits: usize) -> Vec<bool>;
 
-    /// Squeeze `sizes.len()` nonnative field elements from the sponge, where the `i`-th element of
+    /// Squeeze `sizes.len()` field elements from the sponge, where the `i`-th element of
     /// the output has size `sizes[i]`.
-    fn squeeze_nonnative_field_elements_with_sizes<F: PrimeField>(
+    ///
+    /// If the implementation is field-based, to squeeze native field elements,
+    /// call `self.squeeze_native_field_elements` instead.
+    fn squeeze_field_elements_with_sizes<F: PrimeField>(
         &mut self,
         sizes: &[FieldElementSize],
     ) -> Vec<F> {
@@ -122,8 +125,11 @@ pub trait CryptographicSponge: Clone {
     }
 
     /// Squeeze `num_elements` nonnative field elements from the sponge.
+    ///
+    /// If the implementation is field-based, to squeeze native field elements,
+    /// call `self.squeeze_native_field_elements` instead.
     fn squeeze_nonnative_field_elements<F: PrimeField>(&mut self, num_elements: usize) -> Vec<F> {
-        self.squeeze_nonnative_field_elements_with_sizes::<F>(
+        self.squeeze_field_elements_with_sizes::<F>(
             vec![FieldElementSize::Full; num_elements].as_slice(),
         )
     }
@@ -165,7 +171,7 @@ pub trait FieldBasedCryptographicSponge: CryptographicSponge {
         if all_full_sizes {
             self.squeeze_native_field_elements(sizes.len())
         } else {
-            self.squeeze_nonnative_field_elements_with_sizes::<Self::CF>(sizes)
+            self.squeeze_field_elements_with_sizes::<Self::CF>(sizes)
         }
     }
 }

@@ -51,12 +51,11 @@ impl<S: CryptographicSponge, D: DomainSeparator> CryptographicSponge
         self.sponge.squeeze_bits(num_bits)
     }
 
-    fn squeeze_nonnative_field_elements_with_sizes<F: PrimeField>(
+    fn squeeze_field_elements_with_sizes<F: PrimeField>(
         &mut self,
         sizes: &[FieldElementSize],
     ) -> Vec<F> {
-        self.sponge
-            .squeeze_nonnative_field_elements_with_sizes(sizes)
+        self.sponge.squeeze_field_elements_with_sizes(sizes)
     }
 
     fn squeeze_nonnative_field_elements<F: PrimeField>(&mut self, num_elements: usize) -> Vec<F> {
