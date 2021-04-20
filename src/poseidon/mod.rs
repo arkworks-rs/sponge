@@ -137,27 +137,31 @@ impl<F: PrimeField> PoseidonSponge<F> {
 
     // Squeeze |output| many elements. This does not end in a squeeze
     fn squeeze_internal(&mut self, rate_start_index: usize, output: &mut [F]) {
-        // if we can finish in this call
-        if rate_start_index + output.len() <= self.rate {
-            output
-                .clone_from_slice(&self.state[rate_start_index..(output.len() + rate_start_index)]);
-            self.mode = PoseidonSpongeMode::Squeezing {
-                next_squeeze_index: rate_start_index + output.len(),
-            };
-            return;
-        }
-        // otherwise squeeze (rate - rate_start_index) elements
-        let num_elements_squeezed = self.rate - rate_start_index;
-        output[..num_elements_squeezed].clone_from_slice(
-            &self.state[rate_start_index..(num_elements_squeezed + rate_start_index)],
-        );
+        let mut output_remaining = output;
+        loop {
+            // if we can finish in this call
+            if rate_start_index + output_remaining.len() <= self.rate {
+                output_remaining.clone_from_slice(
+                    &self.state[rate_start_index..(output_remaining.len() + rate_start_index)],
+                );
+                self.mode = PoseidonSpongeMode::Squeezing {
+                    next_squeeze_index: rate_start_index + output_remaining.len(),
+                };
+                return;
+            }
+            // otherwise squeeze (rate - rate_start_index) elements
+            let num_elements_squeezed = self.rate - rate_start_index;
+            output_remaining[..num_elements_squeezed].clone_from_slice(
+                &self.state[rate_start_index..(num_elements_squeezed + rate_start_index)],
+            );
 
-        // Unless we are done with squeezing in this call, permute.
-        if output.len() != self.rate {
-            self.permute();
+            // Unless we are done with squeezing in this call, permute.
+            if output_remaining.len() != self.rate {
+                self.permute();
+            }
+            // Repeat with updated output slices
+            output_remaining = &mut output_remaining[num_elements_squeezed..];
         }
-        // Tail recurse, with the correct change to indices in output happening due to changing the slice
-        self.squeeze_internal(0, &mut output[num_elements_squeezed..]);
     }
 }
 
