@@ -1,4 +1,4 @@
-use crate::constraints::AbsorbableGadget;
+use crate::constraints::AbsorbGadget;
 use crate::constraints::CryptographicSpongeVar;
 use crate::poseidon::{PoseidonSponge, PoseidonSpongeMode};
 use ark_ff::{FpParameters, PrimeField};
@@ -229,7 +229,7 @@ impl<F: PrimeField> CryptographicSpongeVar<F, PoseidonSponge<F>> for PoseidonSpo
     }
 
     #[tracing::instrument(target = "r1cs", skip(self, input))]
-    fn absorb(&mut self, input: &impl AbsorbableGadget<F>) -> Result<(), SynthesisError> {
+    fn absorb(&mut self, input: &impl AbsorbGadget<F>) -> Result<(), SynthesisError> {
         let input = input.to_sponge_field_elements()?;
         if input.is_empty() {
             return Ok(());

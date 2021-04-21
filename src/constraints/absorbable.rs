@@ -13,7 +13,7 @@ use ark_relations::r1cs::SynthesisError;
 use ark_std::vec::Vec;
 
 /// An interface for objects that can be absorbed by a `CryptographicSpongeVar`.
-pub trait AbsorbableGadget<F: PrimeField> {
+pub trait AbsorbGadget<F: PrimeField> {
     /// Converts the object into field elements that can be absorbed by a `CryptographicSpongeVar`.
     fn to_sponge_field_elements(&self) -> Result<Vec<FpVar<F>>, SynthesisError>;
 
@@ -31,7 +31,7 @@ pub trait AbsorbableGadget<F: PrimeField> {
     }
 }
 
-impl<F: PrimeField> AbsorbableGadget<F> for UInt8<F> {
+impl<F: PrimeField> AbsorbGadget<F> for UInt8<F> {
     fn to_sponge_field_elements(&self) -> Result<Vec<FpVar<F>>, SynthesisError> {
         vec![self.clone()].to_constraint_field()
     }
@@ -43,13 +43,13 @@ impl<F: PrimeField> AbsorbableGadget<F> for UInt8<F> {
     }
 }
 
-impl<F: PrimeField> AbsorbableGadget<F> for Boolean<F> {
+impl<F: PrimeField> AbsorbGadget<F> for Boolean<F> {
     fn to_sponge_field_elements(&self) -> Result<Vec<FpVar<F>>, SynthesisError> {
         Ok(vec![FpVar::from(self.clone())])
     }
 }
 
-impl<F: PrimeField> AbsorbableGadget<F> for FpVar<F> {
+impl<F: PrimeField> AbsorbGadget<F> for FpVar<F> {
     fn to_sponge_field_elements(&self) -> Result<Vec<FpVar<F>>, SynthesisError> {
         Ok(vec![self.clone()])
     }
@@ -61,7 +61,7 @@ impl<F: PrimeField> AbsorbableGadget<F> for FpVar<F> {
 
 macro_rules! impl_absorbable_group {
     ($group:ident, $params:ident) => {
-        impl<P, F> AbsorbableGadget<<P::BaseField as Field>::BasePrimeField> for $group<P, F>
+        impl<P, F> AbsorbGadget<<P::BaseField as Field>::BasePrimeField> for $group<P, F>
         where
             P: $params,
             F: FieldVar<P::BaseField, <P::BaseField as Field>::BasePrimeField>,
@@ -80,7 +80,7 @@ macro_rules! impl_absorbable_group {
 impl_absorbable_group!(TEAffineVar, TEModelParameters);
 impl_absorbable_group!(SWAffineVar, SWModelParameters);
 
-impl<P, F> AbsorbableGadget<<P::BaseField as Field>::BasePrimeField> for SWProjectiveVar<P, F>
+impl<P, F> AbsorbGadget<<P::BaseField as Field>::BasePrimeField> for SWProjectiveVar<P, F>
 where
     P: SWModelParameters,
     F: FieldVar<P::BaseField, <P::BaseField as Field>::BasePrimeField>,
@@ -97,19 +97,19 @@ where
     }
 }
 
-impl<F: PrimeField, A: AbsorbableGadget<F>> AbsorbableGadget<F> for &[A] {
+impl<F: PrimeField, A: AbsorbGadget<F>> AbsorbGadget<F> for &[A] {
     fn to_sponge_field_elements(&self) -> Result<Vec<FpVar<F>>, SynthesisError> {
         A::batch_to_sponge_field_elements(self)
     }
 }
 
-impl<F: PrimeField, A: AbsorbableGadget<F>> AbsorbableGadget<F> for Vec<A> {
+impl<F: PrimeField, A: AbsorbGadget<F>> AbsorbGadget<F> for Vec<A> {
     fn to_sponge_field_elements(&self) -> Result<Vec<FpVar<F>>, SynthesisError> {
         self.as_slice().to_sponge_field_elements()
     }
 }
 
-impl<F: PrimeField, A: AbsorbableGadget<F>> AbsorbableGadget<F> for Option<A> {
+impl<F: PrimeField, A: AbsorbGadget<F>> AbsorbGadget<F> for Option<A> {
     fn to_sponge_field_elements(&self) -> Result<Vec<FpVar<F>>, SynthesisError> {
         let mut output = vec![FpVar::from(Boolean::constant(self.is_some()))];
         if let Some(absorbable) = self.as_ref() {
@@ -119,7 +119,7 @@ impl<F: PrimeField, A: AbsorbableGadget<F>> AbsorbableGadget<F> for Option<A> {
     }
 }
 
-impl<F: PrimeField, A: AbsorbableGadget<F>> AbsorbableGadget<F> for &A {
+impl<F: PrimeField, A: AbsorbGadget<F>> AbsorbGadget<F> for &A {
     fn to_sponge_field_elements(&self) -> Result<Vec<FpVar<F>>, SynthesisError> {
         (*self).to_sponge_field_elements()
     }
@@ -142,9 +142,9 @@ macro_rules! absorb_gadget {
 macro_rules! collect_sponge_field_elements_gadget {
     ($head:expr $(, $tail:expr)* ) => {
         {
-            let mut output = AbsorbableGadget::to_sponge_field_elements(&$head)?;
+            let mut output = AbsorbGadget::to_sponge_field_elements(&$head)?;
             $(
-                output.append(&mut AbsorbableGadget::to_sponge_field_elements(&$tail)?);
+                output.append(&mut AbsorbGadget::to_sponge_field_elements(&$tail)?);
             )*
 
             Ok(output)

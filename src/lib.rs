@@ -27,8 +27,8 @@ extern crate derivative;
 #[cfg(feature = "r1cs")]
 pub mod constraints;
 
-mod absorbable;
-pub use absorbable::*;
+mod absorb;
+pub use absorb::*;
 
 /// The sponge for Poseidon
 ///

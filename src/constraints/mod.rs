@@ -101,7 +101,7 @@ pub trait CryptographicSpongeVar<CF: PrimeField, S: FieldBasedCryptographicSpong
     fn cs(&self) -> ConstraintSystemRef<CF>;
 
     /// Absorb an input into the sponge.
-    fn absorb(&mut self, input: &impl AbsorbableGadget<CF>) -> Result<(), SynthesisError>;
+    fn absorb(&mut self, input: &impl AbsorbGadget<CF>) -> Result<(), SynthesisError>;
 
     /// Squeeze `num_bytes` bytes from the sponge.
     fn squeeze_bytes(&mut self, num_bytes: usize) -> Result<Vec<UInt8<CF>>, SynthesisError>;

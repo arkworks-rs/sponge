@@ -1,4 +1,4 @@
-use crate::constraints::AbsorbableGadget;
+use crate::constraints::AbsorbGadget;
 use crate::constraints::CryptographicSpongeVar;
 use crate::domain_separated::{DomainSeparatedSponge, DomainSeparator};
 use crate::{Absorb, FieldBasedCryptographicSponge, FieldElementSize};
@@ -78,7 +78,7 @@ where
         self.sponge.cs()
     }
 
-    fn absorb(&mut self, input: &impl AbsorbableGadget<CF>) -> Result<(), SynthesisError> {
+    fn absorb(&mut self, input: &impl AbsorbGadget<CF>) -> Result<(), SynthesisError> {
         self.try_separate_domain()?;
         self.sponge.absorb(input)
     }
