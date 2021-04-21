@@ -12,8 +12,8 @@ use ark_relations::r1cs::{ConstraintSystemRef, LinearCombination, SynthesisError
 use ark_std::vec;
 use ark_std::vec::Vec;
 
-mod absorbable;
-pub use absorbable::*;
+mod absorb;
+pub use absorb::*;
 
 /// Converts little-endian bits to a list of nonnative elements.
 pub fn bits_le_to_nonnative<'a, F: PrimeField, CF: PrimeField>(
@@ -91,6 +91,7 @@ pub fn bits_le_to_nonnative<'a, F: PrimeField, CF: PrimeField>(
 /// The interface for a cryptographic sponge.
 /// A sponge can `absorb` or take in inputs and later `squeeze` or output bytes or field elements.
 /// The outputs are dependent on previous `absorb` and `squeeze` calls.
+/// TODO: Should CryptographicSpongeVar use byte-based sponge as well?
 pub trait CryptographicSpongeVar<CF: PrimeField, S: FieldBasedCryptographicSponge<CF = CF>>:
     Clone
 {

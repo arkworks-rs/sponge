@@ -179,6 +179,10 @@ impl<F: PrimeField> CryptographicSponge for PoseidonSponge<F> {
         ];
 
         let mut ark = Vec::new();
+        // TODO: try to move RNG, and parameters to the method argument
+        // Current issue: just adding `rng` to new does not work best, because different sponges
+        // need different type of parameters.
+        // Do we add an associated type called `Parameter`?
         let mut ark_rng = rand_chacha::ChaChaRng::seed_from_u64(123456789u64);
 
         for _ in 0..(full_rounds + partial_rounds) {

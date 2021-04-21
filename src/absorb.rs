@@ -315,6 +315,8 @@ impl<A: Absorb> Absorb for Option<A> {
     }
 }
 
+// TODO: add more for common data structures, treemap?
+
 impl<A: Absorb> Absorb for &A {
     fn to_sponge_bytes(&self, dest: &mut Vec<u8>) {
         (*self).to_sponge_bytes(dest)

@@ -15,6 +15,7 @@ pub trait DomainSeparator {
 
 /// A sponge that offers backwards compatibility for implementations that do not accept sponge
 /// objects but require domain separation. Operates in the same way as fork.
+/// TODO: Remove `doamin_separated` module, and use `fork`.
 #[derive(Derivative)]
 #[derivative(Clone(bound = "D: DomainSeparator"))]
 pub struct DomainSeparatedSponge<S: CryptographicSponge, D: DomainSeparator> {
