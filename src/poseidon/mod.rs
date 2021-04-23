@@ -171,18 +171,24 @@ pub struct PoseidonParameters<F: PrimeField> {
     partial_rounds: u32,
     alpha: u64,
     mds: Vec<Vec<F>>,
-    chacha_rng_seed: u64
+    chacha_rng_seed: u64,
 }
 
 impl<F: PrimeField> PoseidonParameters<F> {
     /// Initialize the parameter for Poseidon Sponge.
-    pub fn new(full_rounds: u32, partial_rounds: u32, alpha: u64, mds: Vec<Vec<F>>, chacha_rng_seed: u64) -> Self {
+    pub fn new(
+        full_rounds: u32,
+        partial_rounds: u32,
+        alpha: u64,
+        mds: Vec<Vec<F>>,
+        chacha_rng_seed: u64,
+    ) -> Self {
         Self {
             full_rounds,
             partial_rounds,
             alpha,
             mds,
-            chacha_rng_seed
+            chacha_rng_seed,
         }
     }
 
@@ -205,7 +211,7 @@ impl<F: PrimeField> PoseidonParameters<F> {
             alpha,
             partial_rounds,
             full_rounds,
-            chacha_rng_seed: 123456789u64
+            chacha_rng_seed: 123456789u64,
         }
     }
 }

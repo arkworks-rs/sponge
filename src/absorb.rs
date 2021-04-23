@@ -369,7 +369,7 @@ macro_rules! collect_sponge_field_elements {
 
 #[cfg(test)]
 mod tests {
-    use crate::poseidon::{PoseidonSponge, PoseidonParameters};
+    use crate::poseidon::{PoseidonParameters, PoseidonSponge};
     use crate::{Absorb, AbsorbWithLength, CryptographicSponge, FieldBasedCryptographicSponge};
     use ark_ff::{One, PrimeField, UniformRand};
     use ark_std::any::TypeId;
