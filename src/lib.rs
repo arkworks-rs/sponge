@@ -84,7 +84,10 @@ pub trait CryptographicSponge: Clone {
     /// If the implementation is field-based, to squeeze native field elements,
     /// call `self.squeeze_native_field_elements` instead.
     ///
-    /// TODO: Shall we return `Vec<Vec<bool>>`, which represents the underlying bits as well?
+    /// TODO: Support general Field.
+    ///
+    /// Note that when `FieldElementSize` is `FULL`, the output is not strictly uniform. Output
+    /// space is uniform in \[0, 2^{F::MODULUS_BITS - 1}\]
     fn squeeze_field_elements_with_sizes<F: PrimeField>(
         &mut self,
         sizes: &[FieldElementSize],
@@ -178,9 +181,10 @@ pub trait FieldBasedCryptographicSponge: CryptographicSponge {
     }
 }
 
-/// An extension for the inferface of a cryptographic sponge.
+/// An extension for the interface of a cryptographic sponge.
 /// In addition to operations defined in `CryptographicSponge`, `SpongeExt` can convert itself to
 /// a state, and instantiate itself from state.
+/// TODO: change the name, or move it to main trait?
 pub trait SpongeExt: CryptographicSponge {
     /// The full state of the cryptographic sponge.
     type State: Clone;

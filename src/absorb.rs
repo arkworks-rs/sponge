@@ -229,7 +229,7 @@ impl_absorbable_signed!(i128, u128);
 
 impl Absorb for usize {
     fn to_sponge_bytes(&self, dest: &mut Vec<u8>) {
-        dest.extend_from_slice(&self.to_le_bytes()[..])
+        dest.extend_from_slice(&((*self as u64).to_le_bytes())[..])
     }
 
     fn to_sponge_field_elements<F: PrimeField>(&self, dest: &mut Vec<F>) {
