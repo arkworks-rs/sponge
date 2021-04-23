@@ -369,7 +369,7 @@ macro_rules! collect_sponge_field_elements {
 
 #[cfg(test)]
 mod tests {
-    use crate::poseidon::PoseidonSponge;
+    use crate::poseidon::{PoseidonSponge, PoseidonParameters};
     use crate::{Absorb, AbsorbWithLength, CryptographicSponge, FieldBasedCryptographicSponge};
     use ark_ff::{One, PrimeField, UniformRand};
     use ark_std::any::TypeId;
@@ -382,8 +382,9 @@ mod tests {
         let bytes2 = b.to_sponge_bytes_as_vec();
         assert_ne!(bytes1, bytes2);
 
-        let mut sponge1 = PoseidonSponge::<F>::new();
-        let mut sponge2 = PoseidonSponge::<F>::new();
+        let sponge_param = PoseidonParameters::<F>::default();
+        let mut sponge1 = PoseidonSponge::<F>::new(&sponge_param);
+        let mut sponge2 = PoseidonSponge::<F>::new(&sponge_param);
 
         sponge1.absorb(&a);
         sponge2.absorb(&b);
@@ -451,11 +452,12 @@ mod tests {
 
     #[test]
     fn test_macros() {
-        let mut sponge1 = PoseidonSponge::<Fr>::new();
+        let sponge_param = PoseidonParameters::<Fr>::default();
+        let mut sponge1 = PoseidonSponge::<Fr>::new(&sponge_param);
         sponge1.absorb(&vec![1, 2, 3, 4, 5, 6]);
         sponge1.absorb(&Fr::from(114514u128));
 
-        let mut sponge2 = PoseidonSponge::<Fr>::new();
+        let mut sponge2 = PoseidonSponge::<Fr>::new(&sponge_param);
         absorb!(&mut sponge2, vec![1, 2, 3, 4, 5, 6], Fr::from(114514u128));
 
         let expected = sponge1.squeeze_native_field_elements(3);

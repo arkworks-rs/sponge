@@ -26,8 +26,10 @@ pub struct DomainSeparatedSponge<S: CryptographicSponge, D: DomainSeparator> {
 impl<S: CryptographicSponge, D: DomainSeparator> CryptographicSponge
     for DomainSeparatedSponge<S, D>
 {
-    fn new() -> Self {
-        let mut sponge = S::new();
+    type Parameters = S::Parameters;
+
+    fn new(params: &Self::Parameters) -> Self {
+        let mut sponge = S::new(params);
 
         let mut domain = D::domain();
         let mut input = Absorb::to_sponge_bytes_as_vec(&domain.len());

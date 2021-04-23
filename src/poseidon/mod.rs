@@ -165,9 +165,30 @@ impl<F: PrimeField> PoseidonSponge<F> {
     }
 }
 
-impl<F: PrimeField> CryptographicSponge for PoseidonSponge<F> {
-    fn new() -> Self {
-        // Requires F to be Alt_Bn128Fr
+/// Parameters and RNG used
+pub struct PoseidonParameters<F: PrimeField> {
+    full_rounds: u32,
+    partial_rounds: u32,
+    alpha: u64,
+    mds: Vec<Vec<F>>,
+    chacha_rng_seed: u64
+}
+
+impl<F: PrimeField> PoseidonParameters<F> {
+    pub fn new(full_rounds: u32, partial_rounds: u32, alpha: u64, mds: Vec<Vec<F>>, chacha_rng_seed: u64) -> Self {
+        Self {
+            full_rounds,
+            partial_rounds,
+            alpha,
+            mds,
+            chacha_rng_seed
+        }
+    }
+
+    /// Return suggested parameter, according to field type.
+    pub fn default() -> Self {
+        // TODO: We need to implement different parameter for different fields. For now,
+        // We assume F is `Alt_Bn128Fr`
         let full_rounds = 8;
         let partial_rounds = 31;
         let alpha = 17;
@@ -178,12 +199,29 @@ impl<F: PrimeField> CryptographicSponge for PoseidonSponge<F> {
             vec![F::zero(), F::one(), F::one()],
         ];
 
+        Self {
+            mds,
+            alpha,
+            partial_rounds,
+            full_rounds,
+            chacha_rng_seed: 123456789u64
+        }
+    }
+}
+
+impl<F: PrimeField> CryptographicSponge for PoseidonSponge<F> {
+    type Parameters = PoseidonParameters<F>;
+
+    fn new(params: &Self::Parameters) -> Self {
+        // Requires F to be Alt_Bn128Fr
+        let full_rounds = params.full_rounds;
+        let partial_rounds = params.partial_rounds;
+        let alpha = params.alpha;
+
+        let mds = params.mds.clone();
         let mut ark = Vec::new();
-        // TODO: try to move RNG, and parameters to the method argument
-        // Current issue: just adding `rng` to new does not work best, because different sponges
-        // need different type of parameters.
-        // Do we add an associated type called `Parameter`?
-        let mut ark_rng = rand_chacha::ChaChaRng::seed_from_u64(123456789u64);
+
+        let mut ark_rng = rand_chacha::ChaChaRng::seed_from_u64(params.chacha_rng_seed);
 
         for _ in 0..(full_rounds + partial_rounds) {
             let mut res = Vec::new();
@@ -308,8 +346,8 @@ pub struct PoseidonSpongeState<F: PrimeField> {
 impl<CF: PrimeField> SpongeExt for PoseidonSponge<CF> {
     type State = PoseidonSpongeState<CF>;
 
-    fn from_state(state: Self::State) -> Self {
-        let mut sponge = Self::new();
+    fn from_state(state: Self::State, params: &Self::Parameters) -> Self {
+        let mut sponge = Self::new(params);
         sponge.mode = state.mode;
         sponge.state = state.state;
         sponge

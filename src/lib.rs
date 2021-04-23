@@ -74,8 +74,11 @@ impl FieldElementSize {
 /// A sponge can `absorb` or take in inputs and later `squeeze` or output bytes or field elements.
 /// The outputs are dependent on previous `absorb` and `squeeze` calls.
 pub trait CryptographicSponge: Clone {
+    /// Parameter used by the sponge.
+    type Parameters;
+
     /// Initialize a new instance of the sponge.
-    fn new() -> Self;
+    fn new(params: &Self::Parameters) -> Self;
 
     /// Absorb an input into the sponge.
     fn absorb(&mut self, input: &impl Absorb);
@@ -197,7 +200,7 @@ pub trait SpongeExt: CryptographicSponge {
     /// The full state of the cryptographic sponge.
     type State: Clone;
     /// Returns a sponge that uses `state`.
-    fn from_state(state: Self::State) -> Self;
+    fn from_state(state: Self::State, params: &Self::Parameters) -> Self;
     /// Consumes `self` and returns the state.
     fn into_state(self) -> Self::State;
 }
