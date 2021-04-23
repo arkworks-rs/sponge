@@ -60,6 +60,11 @@ impl FieldElementSize {
             F::Params::CAPACITY as usize
         }
     }
+
+    /// Calculate the sum of field element sizes in `elements`.
+    pub fn sum<F: PrimeField>(elements: &[Self]) -> usize {
+        elements.iter().map(|item| item.num_bits::<F>()).sum()
+    }
 }
 
 /// The interface for a cryptographic sponge.
