@@ -1,9 +1,9 @@
 <h1 align="center">Cryptographic Sopnges</h1>
 
 <p align="center">
-    <a href="https://github.com/arkworks-rs/accumulation/blob/master/LICENSE-APACHE">
+    <a href="https://github.com/arkworks-rs/sponge/blob/master/LICENSE-APACHE">
         <img src="https://img.shields.io/badge/license-APACHE-blue.svg"></a>
-    <a href="https://github.com/arkworks-rs/accumulation/blob/master/LICENSE-MIT">
+    <a href="https://github.com/arkworks-rs/sponge/blob/master/LICENSE-MIT">
         <img src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
 </p>
 
