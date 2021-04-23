@@ -175,6 +175,7 @@ pub struct PoseidonParameters<F: PrimeField> {
 }
 
 impl<F: PrimeField> PoseidonParameters<F> {
+    /// Initialize the parameter for Poseidon Sponge.
     pub fn new(full_rounds: u32, partial_rounds: u32, alpha: u64, mds: Vec<Vec<F>>, chacha_rng_seed: u64) -> Self {
         Self {
             full_rounds,
