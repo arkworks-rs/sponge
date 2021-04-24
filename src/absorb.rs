@@ -1,4 +1,3 @@
-#![allow(unused)]
 use ark_ec::models::short_weierstrass_jacobian::GroupAffine as SWAffine;
 use ark_ec::models::twisted_edwards_extended::GroupAffine as TEAffine;
 use ark_ec::models::{SWModelParameters, TEModelParameters};
@@ -7,10 +6,7 @@ use ark_ff::models::{
     Fp832, Fp832Parameters,
 };
 use ark_ff::{to_bytes, PrimeField, ToBytes, ToConstraintField};
-use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ark_std::any::TypeId;
-use ark_std::ops::Deref;
-use ark_std::vec;
 use ark_std::vec::Vec;
 
 /// An interface for objects that can be absorbed by a `CryptographicSponge`.
@@ -372,7 +368,6 @@ mod tests {
     use crate::poseidon::{PoseidonParameters, PoseidonSponge};
     use crate::{Absorb, AbsorbWithLength, CryptographicSponge, FieldBasedCryptographicSponge};
     use ark_ff::{One, PrimeField, UniformRand};
-    use ark_std::any::TypeId;
     use ark_std::test_rng;
     use ark_test_curves::bls12_381::Fr;
     use ark_test_curves::mnt4_753::Fr as MntFr;
@@ -418,8 +413,8 @@ mod tests {
     #[should_panic]
     fn absorb_nonnative_field_should_panic() {
         let mut rng = test_rng();
-        let mut non_native_elem = MntFr::rand(&mut rng);
-        let mut non_native_elem2 = MntFr::rand(&mut rng);
+        let non_native_elem = MntFr::rand(&mut rng);
+        let non_native_elem2 = MntFr::rand(&mut rng);
 
         assert_different_encodings::<Fr, _>(&non_native_elem, &non_native_elem2);
     }
