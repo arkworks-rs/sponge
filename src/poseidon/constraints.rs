@@ -119,58 +119,71 @@ impl<F: PrimeField> PoseidonSpongeVar<F> {
     #[tracing::instrument(target = "r1cs", skip(self))]
     fn absorb_internal(
         &mut self,
-        rate_start_index: usize,
+        mut rate_start_index: usize,
         elements: &[FpVar<F>],
     ) -> Result<(), SynthesisError> {
-        // if we can finish in this call
-        if rate_start_index + elements.len() <= self.rate {
-            for (i, element) in elements.iter().enumerate() {
+        let mut remaining_elements = elements;
+        loop {
+            // if we can finish in this call
+            if rate_start_index + remaining_elements.len() <= self.rate {
+                for (i, element) in remaining_elements.iter().enumerate() {
+                    self.state[i + rate_start_index] += element;
+                }
+                self.mode = PoseidonSpongeMode::Absorbing {
+                    next_absorb_index: rate_start_index + remaining_elements.len(),
+                };
+
+                return Ok(());
+            }
+            // otherwise absorb (rate - rate_start_index) elements
+            let num_elements_absorbed = self.rate - rate_start_index;
+            for (i, element) in remaining_elements
+                .iter()
+                .enumerate()
+                .take(num_elements_absorbed)
+            {
                 self.state[i + rate_start_index] += element;
             }
-            self.mode = PoseidonSpongeMode::Absorbing {
-                next_absorb_index: rate_start_index + elements.len(),
-            };
-
-            return Ok(());
+            self.permute()?;
+            // the input elements got truncated by num elements absorbed
+            remaining_elements = &remaining_elements[num_elements_absorbed..];
+            rate_start_index = 0;
         }
-        // otherwise absorb (rate - rate_start_index) elements
-        let num_elements_absorbed = self.rate - rate_start_index;
-        for (i, element) in elements.iter().enumerate().take(num_elements_absorbed) {
-            self.state[i + rate_start_index] += element;
-        }
-        self.permute()?;
-        // Tail recurse, with the input elements being truncated by num elements absorbed
-        self.absorb_internal(0, &elements[num_elements_absorbed..])
     }
 
     // Squeeze |output| many elements. This does not end in a squeeze
     #[tracing::instrument(target = "r1cs", skip(self))]
     fn squeeze_internal(
         &mut self,
-        rate_start_index: usize,
+        mut rate_start_index: usize,
         output: &mut [FpVar<F>],
     ) -> Result<(), SynthesisError> {
-        // if we can finish in this call
-        if rate_start_index + output.len() <= self.rate {
-            output
-                .clone_from_slice(&self.state[rate_start_index..(output.len() + rate_start_index)]);
-            self.mode = PoseidonSpongeMode::Squeezing {
-                next_squeeze_index: rate_start_index + output.len(),
-            };
-            return Ok(());
-        }
-        // otherwise squeeze (rate - rate_start_index) elements
-        let num_elements_squeezed = self.rate - rate_start_index;
-        output[..num_elements_squeezed].clone_from_slice(
-            &self.state[rate_start_index..(num_elements_squeezed + rate_start_index)],
-        );
+        let mut remaining_output = output;
+        loop {
+            // if we can finish in this call
+            if rate_start_index + remaining_output.len() <= self.rate {
+                remaining_output.clone_from_slice(
+                    &self.state[rate_start_index..(remaining_output.len() + rate_start_index)],
+                );
+                self.mode = PoseidonSpongeMode::Squeezing {
+                    next_squeeze_index: rate_start_index + remaining_output.len(),
+                };
+                return Ok(());
+            }
+            // otherwise squeeze (rate - rate_start_index) elements
+            let num_elements_squeezed = self.rate - rate_start_index;
+            remaining_output[..num_elements_squeezed].clone_from_slice(
+                &self.state[rate_start_index..(num_elements_squeezed + rate_start_index)],
+            );
 
-        // Unless we are done with squeezing in this call, permute.
-        if output.len() != self.rate {
-            self.permute()?;
+            // Unless we are done with squeezing in this call, permute.
+            if remaining_output.len() != self.rate {
+                self.permute()?;
+            }
+            // Repeat with updated output slices and rate start index
+            remaining_output = &mut remaining_output[num_elements_squeezed..];
+            rate_start_index = 0;
         }
-        // Tail recurse, with the correct change to indices in output happening due to changing the slice
-        self.squeeze_internal(0, &mut output[num_elements_squeezed..])
     }
 }
 
@@ -330,7 +343,7 @@ mod tests {
         let mut rng = test_rng();
         let cs = ConstraintSystem::new_ref();
 
-        let absorb1: Vec<_> = (0..8).map(|_| Fr::rand(&mut rng)).collect();
+        let absorb1: Vec<_> = (0..256).map(|_| Fr::rand(&mut rng)).collect();
         let absorb1_var: Vec<_> = absorb1
             .iter()
             .map(|v| FpVar::new_input(ns!(cs, "absorb1"), || Ok(*v)).unwrap())

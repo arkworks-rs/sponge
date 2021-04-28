@@ -105,7 +105,7 @@ impl<F: PrimeField> PoseidonSponge<F> {
     }
 
     // Absorbs everything in elements, this does not end in an absorbtion.
-    fn absorb_internal(&mut self, rate_start_index: usize, elements: &[F]) {
+    fn absorb_internal(&mut self, mut rate_start_index: usize, elements: &[F]) {
         let mut remaining_elements = elements;
 
         loop {
@@ -132,11 +132,12 @@ impl<F: PrimeField> PoseidonSponge<F> {
             self.permute();
             // the input elements got truncated by num elements absorbed
             remaining_elements = &remaining_elements[num_elements_absorbed..];
+            rate_start_index = 0;
         }
     }
 
     // Squeeze |output| many elements. This does not end in a squeeze
-    fn squeeze_internal(&mut self, rate_start_index: usize, output: &mut [F]) {
+    fn squeeze_internal(&mut self, mut rate_start_index: usize, output: &mut [F]) {
         let mut output_remaining = output;
         loop {
             // if we can finish in this call
@@ -161,6 +162,7 @@ impl<F: PrimeField> PoseidonSponge<F> {
             }
             // Repeat with updated output slices
             output_remaining = &mut output_remaining[num_elements_squeezed..];
+            rate_start_index = 0;
         }
     }
 }
