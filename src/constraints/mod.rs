@@ -95,8 +95,11 @@ pub fn bits_le_to_nonnative<'a, F: PrimeField, CF: PrimeField>(
 pub trait CryptographicSpongeVar<CF: PrimeField, S: FieldBasedCryptographicSponge<CF = CF>>:
     Clone
 {
+    /// Parameters used by the sponge.
+    type Parameters;
+
     /// Initialize a new instance of the sponge.
-    fn new(cs: ConstraintSystemRef<CF>) -> Self;
+    fn new(cs: ConstraintSystemRef<CF>, params: &Self::Parameters) -> Self;
 
     /// Returns a ref to the underlying constraint system the sponge is operating in.
     fn cs(&self) -> ConstraintSystemRef<CF>;

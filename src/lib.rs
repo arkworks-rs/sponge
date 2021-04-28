@@ -20,9 +20,6 @@ use ark_ff::{FpParameters, PrimeField};
 use ark_std::vec;
 use ark_std::vec::Vec;
 
-#[macro_use]
-extern crate derivative;
-
 /// Infrastructure for the constraints counterparts.
 #[cfg(feature = "r1cs")]
 pub mod constraints;
@@ -37,10 +34,6 @@ pub use absorb::*;
 ///
 /// [cos]: https://eprint.iacr.org/2019/1076
 pub mod poseidon;
-
-/// A sponge that offers backwards compatibility for implementations that do not accept sponge
-/// objects but require domain separation. Operates in the same way as fork.
-pub mod domain_separated;
 
 /// An enum for specifying the output field element size.
 #[derive(Clone, Copy, Eq, PartialEq)]
@@ -74,7 +67,7 @@ impl FieldElementSize {
 /// A sponge can `absorb` or take in inputs and later `squeeze` or output bytes or field elements.
 /// The outputs are dependent on previous `absorb` and `squeeze` calls.
 pub trait CryptographicSponge: Clone {
-    /// Parameter used by the sponge.
+    /// Parameters used by the sponge.
     type Parameters;
 
     /// Initialize a new instance of the sponge.

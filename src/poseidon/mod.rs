@@ -166,6 +166,7 @@ impl<F: PrimeField> PoseidonSponge<F> {
 }
 
 /// Parameters and RNG used
+#[derive(Clone, Debug)]
 pub struct PoseidonParameters<F: PrimeField> {
     full_rounds: u32,
     partial_rounds: u32,

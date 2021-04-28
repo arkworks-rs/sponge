@@ -1,6 +1,6 @@
 use crate::constraints::AbsorbGadget;
 use crate::constraints::CryptographicSpongeVar;
-use crate::poseidon::{PoseidonSponge, PoseidonSpongeMode};
+use crate::poseidon::{PoseidonParameters, PoseidonSponge, PoseidonSpongeMode};
 use ark_ff::{FpParameters, PrimeField};
 use ark_r1cs_std::fields::fp::FpVar;
 use ark_r1cs_std::prelude::*;
@@ -175,18 +175,16 @@ impl<F: PrimeField> PoseidonSpongeVar<F> {
 }
 
 impl<F: PrimeField> CryptographicSpongeVar<F, PoseidonSponge<F>> for PoseidonSpongeVar<F> {
-    #[tracing::instrument(target = "r1cs", skip(cs))]
-    fn new(cs: ConstraintSystemRef<F>) -> Self {
-        // Requires F to be Alt_Bn128Fr
-        let full_rounds = 8;
-        let partial_rounds = 31;
-        let alpha = 17;
+    type Parameters = PoseidonParameters<F>;
 
-        let mds = vec![
-            vec![F::one(), F::zero(), F::one()],
-            vec![F::one(), F::one(), F::zero()],
-            vec![F::zero(), F::one(), F::one()],
-        ];
+    #[tracing::instrument(target = "r1cs", skip(cs))]
+    fn new(cs: ConstraintSystemRef<F>, params: &PoseidonParameters<F>) -> Self {
+        // Requires F to be Alt_Bn128Fr
+        let full_rounds = params.full_rounds;
+        let partial_rounds = params.partial_rounds;
+        let alpha = params.alpha;
+
+        let mds = params.mds.to_vec();
 
         let mut ark = Vec::new();
         let mut ark_rng = rand_chacha::ChaChaRng::seed_from_u64(123456789u64);
