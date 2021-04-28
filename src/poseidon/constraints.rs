@@ -179,7 +179,6 @@ impl<F: PrimeField> CryptographicSpongeVar<F, PoseidonSponge<F>> for PoseidonSpo
 
     #[tracing::instrument(target = "r1cs", skip(cs))]
     fn new(cs: ConstraintSystemRef<F>, params: &PoseidonParameters<F>) -> Self {
-        // Requires F to be Alt_Bn128Fr
         let full_rounds = params.full_rounds;
         let partial_rounds = params.partial_rounds;
         let alpha = params.alpha;
