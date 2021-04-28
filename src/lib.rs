@@ -195,7 +195,6 @@ pub trait FieldBasedCryptographicSponge: CryptographicSponge {
 /// An extension for the interface of a cryptographic sponge.
 /// In addition to operations defined in `CryptographicSponge`, `SpongeExt` can convert itself to
 /// a state, and instantiate itself from state.
-/// TODO: change the name, or move it to main trait?
 pub trait SpongeExt: CryptographicSponge {
     /// The full state of the cryptographic sponge.
     type State: Clone;
