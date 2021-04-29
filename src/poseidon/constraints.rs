@@ -7,7 +7,6 @@ use ark_r1cs_std::prelude::*;
 use ark_relations::r1cs::{ConstraintSystemRef, SynthesisError};
 use ark_std::vec;
 use ark_std::vec::Vec;
-use rand_core::SeedableRng;
 
 #[derive(Clone)]
 /// the gadget for Poseidon sponge
@@ -198,17 +197,7 @@ impl<F: PrimeField> CryptographicSpongeVar<F, PoseidonSponge<F>> for PoseidonSpo
 
         let mds = params.mds.to_vec();
 
-        let mut ark = Vec::new();
-        let mut ark_rng = rand_chacha::ChaChaRng::seed_from_u64(123456789u64);
-
-        for _ in 0..(full_rounds + partial_rounds) {
-            let mut res = Vec::new();
-
-            for _ in 0..3 {
-                res.push(F::rand(&mut ark_rng));
-            }
-            ark.push(res);
-        }
+        let ark = params.ark.to_vec();
 
         let rate = 2;
         let capacity = 1;
@@ -329,7 +318,8 @@ impl<F: PrimeField> CryptographicSpongeVar<F, PoseidonSponge<F>> for PoseidonSpo
 mod tests {
     use crate::constraints::CryptographicSpongeVar;
     use crate::poseidon::constraints::PoseidonSpongeVar;
-    use crate::poseidon::{PoseidonParameters, PoseidonSponge};
+    use crate::poseidon::tests::poseidon_parameters_for_test;
+    use crate::poseidon::PoseidonSponge;
     use crate::{CryptographicSponge, FieldBasedCryptographicSponge};
     use ark_ff::UniformRand;
     use ark_r1cs_std::fields::fp::FpVar;
@@ -338,6 +328,7 @@ mod tests {
     use ark_relations::*;
     use ark_std::test_rng;
     use ark_test_curves::bls12_381::Fr;
+
     #[test]
     fn absorb_test() {
         let mut rng = test_rng();
@@ -355,7 +346,7 @@ mod tests {
             .map(|v| UInt8::new_input_vec(ns!(cs, "absorb2"), v).unwrap())
             .collect();
 
-        let sponge_params = PoseidonParameters::default();
+        let sponge_params = poseidon_parameters_for_test();
 
         let mut native_sponge = PoseidonSponge::<Fr>::new(&sponge_params);
         let mut constraint_sponge = PoseidonSpongeVar::<Fr>::new(cs.clone(), &sponge_params);

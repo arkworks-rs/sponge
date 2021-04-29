@@ -1,12 +1,14 @@
 use crate::{Absorb, CryptographicSponge, FieldBasedCryptographicSponge, SpongeExt};
 use ark_ff::{BigInteger, FpParameters, PrimeField};
+use ark_std::rand::Rng;
 use ark_std::vec;
 use ark_std::vec::Vec;
-use rand_core::SeedableRng;
 
 /// constraints for Poseidon
 #[cfg(feature = "r1cs")]
 pub mod constraints;
+#[cfg(test)]
+mod tests;
 
 #[derive(Clone)]
 enum PoseidonSpongeMode {
@@ -174,7 +176,7 @@ pub struct PoseidonParameters<F: PrimeField> {
     partial_rounds: u32,
     alpha: u64,
     mds: Vec<Vec<F>>,
-    chacha_rng_seed: u64,
+    ark: Vec<Vec<F>>,
 }
 
 impl<F: PrimeField> PoseidonParameters<F> {
@@ -184,38 +186,36 @@ impl<F: PrimeField> PoseidonParameters<F> {
         partial_rounds: u32,
         alpha: u64,
         mds: Vec<Vec<F>>,
-        chacha_rng_seed: u64,
+        ark: Vec<Vec<F>>,
     ) -> Self {
+        // shape check
+        assert_eq!(ark.len() as u32, full_rounds + partial_rounds);
+        for item in &ark {
+            assert_eq!(item.len(), 3);
+        }
         Self {
             full_rounds,
             partial_rounds,
             alpha,
             mds,
-            chacha_rng_seed,
+            ark,
         }
     }
 
-    /// Return suggested parameter, according to field type.
-    pub fn default() -> Self {
-        // TODO: We need to implement different parameter for different fields. For now,
-        // We assume F is `Alt_Bn128Fr`
-        let full_rounds = 8;
-        let partial_rounds = 31;
-        let alpha = 17;
+    /// Return a random round constant.
+    pub fn random_ark<R: Rng>(full_rounds: u32, rng: &mut R) -> Vec<Vec<F>> {
+        let mut ark = Vec::new();
 
-        let mds = vec![
-            vec![F::one(), F::zero(), F::one()],
-            vec![F::one(), F::one(), F::zero()],
-            vec![F::zero(), F::one(), F::one()],
-        ];
+        for _ in 0..full_rounds {
+            let mut res = Vec::new();
 
-        Self {
-            mds,
-            alpha,
-            partial_rounds,
-            full_rounds,
-            chacha_rng_seed: 123456789u64,
+            for _ in 0..3 {
+                res.push(F::rand(rng));
+            }
+            ark.push(res);
         }
+
+        ark
     }
 }
 
@@ -229,18 +229,8 @@ impl<F: PrimeField> CryptographicSponge for PoseidonSponge<F> {
         let alpha = params.alpha;
 
         let mds = params.mds.clone();
-        let mut ark = Vec::new();
 
-        let mut ark_rng = rand_chacha::ChaChaRng::seed_from_u64(params.chacha_rng_seed);
-
-        for _ in 0..(full_rounds + partial_rounds) {
-            let mut res = Vec::new();
-
-            for _ in 0..3 {
-                res.push(F::rand(&mut ark_rng));
-            }
-            ark.push(res);
-        }
+        let ark = params.ark.to_vec();
 
         let rate = 2;
         let capacity = 1;
