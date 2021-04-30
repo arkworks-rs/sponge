@@ -10,6 +10,7 @@ use ark_r1cs_std::groups::curves::short_weierstrass::{
 use ark_r1cs_std::groups::curves::twisted_edwards::AffineVar as TEAffineVar;
 use ark_r1cs_std::ToConstraintFieldGadget;
 use ark_relations::r1cs::SynthesisError;
+use ark_std::vec;
 use ark_std::vec::Vec;
 
 /// An interface for objects that can be absorbed by a `CryptographicSpongeVar`.
