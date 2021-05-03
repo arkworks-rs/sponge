@@ -156,19 +156,14 @@ pub trait CryptographicSponge: Clone {
 }
 
 /// The interface for field-based cryptographic sponge.
-pub trait FieldBasedCryptographicSponge: CryptographicSponge {
-    /// The native field used by the cryptographic sponge implementation.
-    type CF: PrimeField;
-
+/// `CF` is the native field used by the cryptographic sponge implementation.
+pub trait FieldBasedCryptographicSponge<CF: PrimeField>: CryptographicSponge {
     /// Squeeze `num_elements` field elements from the sponge.
-    fn squeeze_native_field_elements(&mut self, num_elements: usize) -> Vec<Self::CF>;
+    fn squeeze_native_field_elements(&mut self, num_elements: usize) -> Vec<CF>;
 
     /// Squeeze `sizes.len()` field elements from the sponge, where the `i`-th element of
     /// the output has size `sizes[i]`.
-    fn squeeze_native_field_elements_with_sizes(
-        &mut self,
-        sizes: &[FieldElementSize],
-    ) -> Vec<Self::CF> {
+    fn squeeze_native_field_elements_with_sizes(&mut self, sizes: &[FieldElementSize]) -> Vec<CF> {
         let mut all_full_sizes = true;
         for size in sizes {
             if *size != FieldElementSize::Full {
@@ -180,7 +175,7 @@ pub trait FieldBasedCryptographicSponge: CryptographicSponge {
         if all_full_sizes {
             self.squeeze_native_field_elements(sizes.len())
         } else {
-            self.squeeze_field_elements_with_sizes::<Self::CF>(sizes)
+            self.squeeze_field_elements_with_sizes::<CF>(sizes)
         }
     }
 }

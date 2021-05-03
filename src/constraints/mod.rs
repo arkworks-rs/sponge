@@ -92,7 +92,7 @@ pub fn bits_le_to_nonnative<'a, F: PrimeField, CF: PrimeField>(
 /// A sponge can `absorb` or take in inputs and later `squeeze` or output bytes or field elements.
 /// The outputs are dependent on previous `absorb` and `squeeze` calls.
 /// For now, `CryptographicSpongeVar` only supports field-based sponge.
-pub trait CryptographicSpongeVar<CF: PrimeField, S: FieldBasedCryptographicSponge<CF = CF>>:
+pub trait CryptographicSpongeVar<CF: PrimeField, S: FieldBasedCryptographicSponge<CF>>:
     Clone
 {
     /// Parameters used by the sponge.

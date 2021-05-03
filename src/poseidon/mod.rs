@@ -310,9 +310,7 @@ impl<F: PrimeField> CryptographicSponge for PoseidonSponge<F> {
     }
 }
 
-impl<F: PrimeField> FieldBasedCryptographicSponge for PoseidonSponge<F> {
-    type CF = F;
-
+impl<F: PrimeField> FieldBasedCryptographicSponge<F> for PoseidonSponge<F> {
     fn squeeze_native_field_elements(&mut self, num_elements: usize) -> Vec<F> {
         let mut squeezed_elems = vec![F::zero(); num_elements];
         match self.mode {
