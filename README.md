@@ -1,4 +1,4 @@
-<h1 align="center">Cryptographic Sopnges</h1>
+<h1 align="center">Cryptographic Sponges</h1>
 
 <p align="center">
     <a href="https://github.com/arkworks-rs/sponge/blob/master/LICENSE-APACHE">
