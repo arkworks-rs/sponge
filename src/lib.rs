@@ -135,9 +135,9 @@ pub trait CryptographicSponge: Clone {
 
     /// Squeeze `num_elements` nonnative field elements from the sponge.
     ///
-    /// If the implementation is field-based, to squeeze native field elements,
-    /// call `self.squeeze_native_field_elements` instead.
-    fn squeeze_nonnative_field_elements<F: PrimeField>(&mut self, num_elements: usize) -> Vec<F> {
+    /// Because of rust limitation, for field-based implementation, using this method to squeeze
+    /// native field elements will have runtime casting cost. For better efficiency, use `squeeze_native_field_elements`.
+    fn squeeze_field_elements<F: PrimeField>(&mut self, num_elements: usize) -> Vec<F> {
         self.squeeze_field_elements_with_sizes::<F>(
             vec![FieldElementSize::Full; num_elements].as_slice(),
         )

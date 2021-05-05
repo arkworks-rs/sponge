@@ -103,7 +103,7 @@ pub trait AbsorbWithLength: Absorb {
 /// If `F1` equals to `F2`, return `x` as `F2`, otherwise panics.
 /// ## Panics
 /// This function will panic if `F1` is not equal to `F2`.
-fn field_cast<F1: PrimeField, F2: PrimeField>(input: F1) -> F2 {
+pub(crate) fn field_cast<F1: PrimeField, F2: PrimeField>(input: F1) -> F2 {
     if TypeId::of::<F1>() != TypeId::of::<F2>() {
         panic!("Trying to absorb non-native field elements.")
     } else {
@@ -114,7 +114,7 @@ fn field_cast<F1: PrimeField, F2: PrimeField>(input: F1) -> F2 {
 /// If `F1` equals to `F2`, add all elements of x as `F2` to `dest`, otherwise panics.
 /// ## Panics
 /// This function will panic if `F1` is not equal to `F2`.
-fn batch_field_cast<F1: PrimeField, F2: PrimeField>(x: &[F1], dest: &mut Vec<F2>) {
+pub(crate) fn batch_field_cast<F1: PrimeField, F2: PrimeField>(x: &[F1], dest: &mut Vec<F2>) {
     if TypeId::of::<F1>() != TypeId::of::<F2>() {
         panic!("Trying to absorb non-native field elements.")
     } else {

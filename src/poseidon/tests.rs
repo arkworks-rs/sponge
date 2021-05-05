@@ -68,6 +68,22 @@ fn list_with_nonconstant_size_element() {
 }
 
 #[test]
+fn test_squeeze_cast_native() {
+    let mut rng = test_rng();
+    let sponge_param = poseidon_parameters_for_test();
+    let elem = Fr::rand(&mut rng);
+    let mut sponge1 = PoseidonSponge::<Fr>::new(&sponge_param);
+    sponge1.absorb(&elem);
+    let mut sponge2 = sponge1.clone();
+
+    // those two should return same result
+    let squeezed1 = sponge1.squeeze_native_field_elements(5);
+    let squeezed2 = sponge2.squeeze_field_elements::<Fr>(5);
+
+    assert_eq!(squeezed1, squeezed2);
+}
+
+#[test]
 fn test_macros() {
     let sponge_param = poseidon_parameters_for_test();
     let mut sponge1 = PoseidonSponge::<Fr>::new(&sponge_param);
