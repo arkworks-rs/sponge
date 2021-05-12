@@ -6,9 +6,9 @@ use ark_ff::models::{
     Fp832, Fp832Parameters,
 };
 use ark_ff::{to_bytes, PrimeField, ToBytes, ToConstraintField};
+use ark_serialize::CanonicalSerialize;
 use ark_std::any::TypeId;
 use ark_std::vec::Vec;
-
 /// An interface for objects that can be absorbed by a `CryptographicSponge`.
 pub trait Absorb {
     /// Converts the object into a list of bytes that can be absorbed by a `CryptographicSponge`.
@@ -78,7 +78,7 @@ pub trait Absorb {
     }
 }
 
-/// An extension to `Absorb` that is specific to item with variable length, such as a list.
+/// An extension to `Absorb` that is specific to items with variable length, such as a list.
 pub trait AbsorbWithLength: Absorb {
     /// The length of the `self` being absorbed.
     fn absorb_length(&self) -> usize;
@@ -100,7 +100,7 @@ pub trait AbsorbWithLength: Absorb {
     }
 }
 
-/// If `F1` equals to `F2`, return `x` as `F2`, otherwise panics.
+/// If `F1` and `F2` are the same type, return `input` but cast to `F2`, and panic otherwise.
 /// ## Panics
 /// This function will panic if `F1` is not equal to `F2`.
 pub(crate) fn field_cast<F1: PrimeField, F2: PrimeField>(input: F1) -> F2 {
@@ -125,7 +125,7 @@ pub(crate) fn batch_field_cast<F1: PrimeField, F2: PrimeField>(x: &[F1], dest: &
 
 impl Absorb for u8 {
     fn to_sponge_bytes(&self, dest: &mut Vec<u8>) {
-        self.write(dest).unwrap()
+        dest.push(*self)
     }
 
     fn to_sponge_field_elements<F: PrimeField>(&self, dest: &mut Vec<F>) {
@@ -157,7 +157,7 @@ macro_rules! impl_absorbable_field {
     ($field:ident, $params:ident) => {
         impl<P: $params> Absorb for $field<P> {
             fn to_sponge_bytes(&self, dest: &mut Vec<u8>) {
-                self.write(dest).unwrap()
+                self.serialize(dest).unwrap()
             }
 
             fn to_sponge_field_elements<F: PrimeField>(&self, dest: &mut Vec<F>) {
@@ -245,7 +245,7 @@ impl Absorb for isize {
 
 impl<CF: PrimeField, P: TEModelParameters<BaseField = CF>> Absorb for TEAffine<P> {
     fn to_sponge_bytes(&self, dest: &mut Vec<u8>) {
-        self.write(dest).unwrap()
+        self.serialize(dest).unwrap()
     }
 
     fn to_sponge_field_elements<F: PrimeField>(&self, dest: &mut Vec<F>) {
@@ -255,7 +255,7 @@ impl<CF: PrimeField, P: TEModelParameters<BaseField = CF>> Absorb for TEAffine<P
 
 impl<CF: PrimeField, P: SWModelParameters<BaseField = CF>> Absorb for SWAffine<P> {
     fn to_sponge_bytes(&self, dest: &mut Vec<u8>) {
-        self.write(dest).unwrap()
+        self.serialize(dest).unwrap()
     }
 
     fn to_sponge_field_elements<F: PrimeField>(&self, dest: &mut Vec<F>) {
