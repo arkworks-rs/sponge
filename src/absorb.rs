@@ -8,6 +8,7 @@ use ark_ff::models::{
 use ark_ff::{PrimeField, ToConstraintField};
 use ark_serialize::CanonicalSerialize;
 use ark_std::any::TypeId;
+use ark_std::vec;
 use ark_std::vec::Vec;
 /// An interface for objects that can be absorbed by a `CryptographicSponge`.
 pub trait Absorb {
