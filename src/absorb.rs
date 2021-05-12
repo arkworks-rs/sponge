@@ -250,7 +250,7 @@ impl Absorb for isize {
 
 impl<CF: PrimeField, P: TEModelParameters<BaseField = CF>> Absorb for TEAffine<P> {
     fn to_sponge_bytes(&self, dest: &mut Vec<u8>) {
-        self.serialize(dest).unwrap()
+        self.to_field_elements().unwrap().serialize(dest).unwrap()
     }
 
     fn to_sponge_field_elements<F: PrimeField>(&self, dest: &mut Vec<F>) {
@@ -260,7 +260,7 @@ impl<CF: PrimeField, P: TEModelParameters<BaseField = CF>> Absorb for TEAffine<P
 
 impl<CF: PrimeField, P: SWModelParameters<BaseField = CF>> Absorb for SWAffine<P> {
     fn to_sponge_bytes(&self, dest: &mut Vec<u8>) {
-        self.serialize(dest).unwrap()
+        self.to_field_elements().unwrap().serialize(dest).unwrap()
     }
 
     fn to_sponge_field_elements<F: PrimeField>(&self, dest: &mut Vec<F>) {

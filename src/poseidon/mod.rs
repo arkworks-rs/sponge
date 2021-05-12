@@ -21,7 +21,7 @@ enum PoseidonSpongeMode {
 }
 
 #[derive(Clone)]
-/// the sponge for Poseidon
+/// A duplex sponge based using the Poseidon permutation.
 ///
 /// This implementation of Poseidon is entirely from Fractal's implementation in [COS20][cos]
 /// with small syntax changes.
