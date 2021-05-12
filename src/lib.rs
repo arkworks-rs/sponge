@@ -127,7 +127,7 @@ pub trait CryptographicSponge: Clone {
                 })
                 .collect::<Vec<_>>();
 
-            output.push(F::from_random_bytes(nonnative_bytes.as_slice()).unwrap());
+            output.push(F::from_le_bytes_mod_order(nonnative_bytes.as_slice()));
         }
 
         output

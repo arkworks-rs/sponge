@@ -5,7 +5,7 @@ use ark_ff::models::{
     Fp256, Fp256Parameters, Fp320, Fp320Parameters, Fp384, Fp384Parameters, Fp768, Fp768Parameters,
     Fp832, Fp832Parameters,
 };
-use ark_ff::{to_bytes, PrimeField, ToBytes, ToConstraintField};
+use ark_ff::{PrimeField, ToConstraintField};
 use ark_serialize::CanonicalSerialize;
 use ark_std::any::TypeId;
 use ark_std::vec::Vec;
@@ -107,7 +107,9 @@ pub(crate) fn field_cast<F1: PrimeField, F2: PrimeField>(input: F1) -> F2 {
     if TypeId::of::<F1>() != TypeId::of::<F2>() {
         panic!("Trying to absorb non-native field elements.")
     } else {
-        F2::from_le_bytes_mod_order(&to_bytes!(input).unwrap())
+        let mut buf = vec![];
+        input.serialize(&mut buf).unwrap();
+        F2::from_le_bytes_mod_order(&buf)
     }
 }
 
@@ -118,8 +120,11 @@ pub(crate) fn batch_field_cast<F1: PrimeField, F2: PrimeField>(x: &[F1], dest: &
     if TypeId::of::<F1>() != TypeId::of::<F2>() {
         panic!("Trying to absorb non-native field elements.")
     } else {
-        x.iter()
-            .for_each(|item| dest.push(F2::from_le_bytes_mod_order(&to_bytes!(item).unwrap())))
+        x.iter().for_each(|item| {
+            let mut buf = vec![];
+            item.serialize(&mut buf).unwrap();
+            dest.push(F2::from_le_bytes_mod_order(&buf))
+        })
     }
 }
 
@@ -361,4 +366,24 @@ macro_rules! collect_sponge_field_elements {
             output
         }
     };
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{batch_field_cast, field_cast};
+    use ark_ff::UniformRand;
+    use ark_std::test_rng;
+    use ark_test_curves::bls12_381::Fr;
+
+    #[test]
+    fn test_cast() {
+        let mut rng = test_rng();
+        let expected = Fr::rand(&mut rng);
+        let actual = field_cast::<_, Fr>(expected);
+        assert_eq!(actual, expected);
+        let expected: Vec<_> = (0..10).map(|_| Fr::rand(&mut rng)).collect();
+        let mut actual = vec![];
+        batch_field_cast::<_, Fr>(&expected, &mut actual);
+        assert_eq!(actual, expected);
+    }
 }
