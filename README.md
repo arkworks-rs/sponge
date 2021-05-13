@@ -62,4 +62,4 @@ Alessandro Chiesa, Dev Ojha, Nicholas Spooner
 Lorenzo Grassi, Dmitry Khovratovich, Christian Rechberger, Arnab Roy, Markus Schofnegger
 
 [cos20]: https://eprint.iacr.org/2019/1076
-[gkrrs19]: https://eprint.iacr.org/2019/458.pdf
+[gkrrs19]: https://eprint.iacr.org/2019/458
