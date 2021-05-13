@@ -8,7 +8,6 @@ use ark_ff::models::{
 use ark_ff::{PrimeField, ToConstraintField};
 use ark_serialize::CanonicalSerialize;
 use ark_std::any::TypeId;
-use ark_std::vec;
 use ark_std::vec::Vec;
 /// An interface for objects that can be absorbed by a `CryptographicSponge`.
 pub trait Absorb {
@@ -108,7 +107,7 @@ pub(crate) fn field_cast<F1: PrimeField, F2: PrimeField>(input: F1) -> F2 {
     if TypeId::of::<F1>() != TypeId::of::<F2>() {
         panic!("Trying to absorb non-native field elements.")
     } else {
-        let mut buf = vec![];
+        let mut buf = Vec::new();
         input.serialize(&mut buf).unwrap();
         F2::from_le_bytes_mod_order(&buf)
     }
@@ -122,7 +121,7 @@ pub(crate) fn batch_field_cast<F1: PrimeField, F2: PrimeField>(x: &[F1], dest: &
         panic!("Trying to absorb non-native field elements.")
     } else {
         x.iter().for_each(|item| {
-            let mut buf = vec![];
+            let mut buf = Vec::new();
             item.serialize(&mut buf).unwrap();
             dest.push(F2::from_le_bytes_mod_order(&buf))
         })
@@ -383,7 +382,7 @@ mod tests {
         let actual = field_cast::<_, Fr>(expected);
         assert_eq!(actual, expected);
         let expected: Vec<_> = (0..10).map(|_| Fr::rand(&mut rng)).collect();
-        let mut actual = vec![];
+        let mut actual = Vec::new();
         batch_field_cast::<_, Fr>(&expected, &mut actual);
         assert_eq!(actual, expected);
     }
