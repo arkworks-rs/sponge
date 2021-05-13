@@ -7,7 +7,6 @@ use ark_ff::models::{
 };
 use ark_ff::{PrimeField, ToConstraintField};
 use ark_serialize::CanonicalSerialize;
-use ark_std::any::TypeId;
 use ark_std::vec::Vec;
 /// An interface for objects that can be absorbed by a `CryptographicSponge`.
 pub trait Absorb {
@@ -104,7 +103,7 @@ pub trait AbsorbWithLength: Absorb {
 /// ## Panics
 /// This function will panic if `F1` is not equal to `F2`.
 pub(crate) fn field_cast<F1: PrimeField, F2: PrimeField>(input: F1) -> Option<F2> {
-    if TypeId::of::<F1>() != TypeId::of::<F2>() {
+    if F1::characteristic() != F2::characteristic() {
         // Trying to absorb non-native field elements.
         None
     } else {
@@ -121,7 +120,7 @@ pub(crate) fn batch_field_cast<'a, F1: PrimeField, F2: PrimeField>(
     x: &[F1],
     dest: &'a mut Vec<F2>,
 ) -> Option<&'a mut Vec<F2>> {
-    if TypeId::of::<F1>() != TypeId::of::<F2>() {
+    if F1::characteristic() != F2::characteristic() {
         // "Trying to absorb non-native field elements."
         None
     } else {
