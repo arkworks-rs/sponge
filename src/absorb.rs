@@ -103,28 +103,34 @@ pub trait AbsorbWithLength: Absorb {
 /// If `F1` and `F2` are the same type, return `input` but cast to `F2`, and panic otherwise.
 /// ## Panics
 /// This function will panic if `F1` is not equal to `F2`.
-pub(crate) fn field_cast<F1: PrimeField, F2: PrimeField>(input: F1) -> F2 {
+pub(crate) fn field_cast<F1: PrimeField, F2: PrimeField>(input: F1) -> Option<F2> {
     if TypeId::of::<F1>() != TypeId::of::<F2>() {
-        panic!("Trying to absorb non-native field elements.")
+        // Trying to absorb non-native field elements.
+        None
     } else {
         let mut buf = Vec::new();
         input.serialize(&mut buf).unwrap();
-        F2::from_le_bytes_mod_order(&buf)
+        Some(F2::from_le_bytes_mod_order(&buf))
     }
 }
 
-/// If `F1` equals to `F2`, add all elements of x as `F2` to `dest`, otherwise panics.
-/// ## Panics
-/// This function will panic if `F1` is not equal to `F2`.
-pub(crate) fn batch_field_cast<F1: PrimeField, F2: PrimeField>(x: &[F1], dest: &mut Vec<F2>) {
+/// If `F1` equals to `F2`, add all elements of x as `F2` to `dest` and returns `dest` pointer.
+///
+/// This function will return None and no-op if `F1` is not equal to `F2`.
+pub(crate) fn batch_field_cast<'a, F1: PrimeField, F2: PrimeField>(
+    x: &[F1],
+    dest: &'a mut Vec<F2>,
+) -> Option<&'a mut Vec<F2>> {
     if TypeId::of::<F1>() != TypeId::of::<F2>() {
-        panic!("Trying to absorb non-native field elements.")
+        // "Trying to absorb non-native field elements."
+        None
     } else {
         x.iter().for_each(|item| {
             let mut buf = Vec::new();
             item.serialize(&mut buf).unwrap();
             dest.push(F2::from_le_bytes_mod_order(&buf))
-        })
+        });
+        Some(dest)
     }
 }
 
@@ -166,14 +172,14 @@ macro_rules! impl_absorbable_field {
             }
 
             fn to_sponge_field_elements<F: PrimeField>(&self, dest: &mut Vec<F>) {
-                dest.push(field_cast(*self))
+                dest.push(field_cast(*self).unwrap())
             }
 
             fn batch_to_sponge_field_elements<F: PrimeField>(batch: &[Self], dest: &mut Vec<F>)
             where
                 Self: Sized,
             {
-                batch_field_cast(batch, dest)
+                batch_field_cast(batch, dest).unwrap();
             }
         }
     };
@@ -254,7 +260,7 @@ impl<CF: PrimeField, P: TEModelParameters<BaseField = CF>> Absorb for TEAffine<P
     }
 
     fn to_sponge_field_elements<F: PrimeField>(&self, dest: &mut Vec<F>) {
-        batch_field_cast::<P::BaseField, _>(&self.to_field_elements().unwrap(), dest);
+        batch_field_cast::<P::BaseField, _>(&self.to_field_elements().unwrap(), dest).unwrap();
     }
 }
 
@@ -264,7 +270,7 @@ impl<CF: PrimeField, P: SWModelParameters<BaseField = CF>> Absorb for SWAffine<P
     }
 
     fn to_sponge_field_elements<F: PrimeField>(&self, dest: &mut Vec<F>) {
-        batch_field_cast::<P::BaseField, _>(&self.to_field_elements().unwrap(), dest);
+        batch_field_cast::<P::BaseField, _>(&self.to_field_elements().unwrap(), dest).unwrap();
     }
 }
 
@@ -379,11 +385,11 @@ mod tests {
     fn test_cast() {
         let mut rng = test_rng();
         let expected = Fr::rand(&mut rng);
-        let actual = field_cast::<_, Fr>(expected);
+        let actual = field_cast::<_, Fr>(expected).unwrap();
         assert_eq!(actual, expected);
         let expected: Vec<_> = (0..10).map(|_| Fr::rand(&mut rng)).collect();
         let mut actual = Vec::new();
-        batch_field_cast::<_, Fr>(&expected, &mut actual);
+        batch_field_cast::<_, Fr>(&expected, &mut actual).unwrap();
         assert_eq!(actual, expected);
     }
 }

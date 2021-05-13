@@ -53,7 +53,6 @@ impl FieldElementSize {
             }
         };
         F::Params::CAPACITY as usize
-
     }
 
     /// Calculate the sum of field element sizes in `elements`.
