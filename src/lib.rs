@@ -61,6 +61,48 @@ impl FieldElementSize {
     }
 }
 
+/// Default implementation of `CryptographicSponge::squeeze_field_elements_with_sizes`
+pub(crate) fn squeeze_field_elements_with_sizes_default_impl<F: PrimeField>(
+    sponge: &mut impl CryptographicSponge,
+    sizes: &[FieldElementSize],
+) -> Vec<F> {
+    if sizes.len() == 0 {
+        return Vec::new();
+    }
+
+    let mut total_bits = 0usize;
+    for size in sizes {
+        total_bits += size.num_bits::<F>();
+    }
+
+    let bits = sponge.squeeze_bits(total_bits);
+    let mut bits_window = bits.as_slice();
+
+    let mut output = Vec::with_capacity(sizes.len());
+    for size in sizes {
+        let num_bits = size.num_bits::<F>();
+        let nonnative_bits_le: Vec<bool> = bits_window[..num_bits].to_vec();
+        bits_window = &bits_window[num_bits..];
+
+        let nonnative_bytes = nonnative_bits_le
+            .chunks(8)
+            .map(|bits| {
+                let mut byte = 0u8;
+                for (i, &bit) in bits.into_iter().enumerate() {
+                    if bit {
+                        byte += 1 << i;
+                    }
+                }
+                byte
+            })
+            .collect::<Vec<_>>();
+
+        output.push(F::from_le_bytes_mod_order(nonnative_bytes.as_slice()));
+    }
+
+    output
+}
+
 /// The interface for a cryptographic sponge.
 /// A sponge can `absorb` or take in inputs and later `squeeze` or output bytes or field elements.
 /// The outputs are dependent on previous `absorb` and `squeeze` calls.
@@ -94,41 +136,7 @@ pub trait CryptographicSponge: Clone {
         &mut self,
         sizes: &[FieldElementSize],
     ) -> Vec<F> {
-        if sizes.len() == 0 {
-            return Vec::new();
-        }
-
-        let mut total_bits = 0usize;
-        for size in sizes {
-            total_bits += size.num_bits::<F>();
-        }
-
-        let bits = self.squeeze_bits(total_bits);
-        let mut bits_window = bits.as_slice();
-
-        let mut output = Vec::with_capacity(sizes.len());
-        for size in sizes {
-            let num_bits = size.num_bits::<F>();
-            let nonnative_bits_le: Vec<bool> = bits_window[..num_bits].to_vec();
-            bits_window = &bits_window[num_bits..];
-
-            let nonnative_bytes = nonnative_bits_le
-                .chunks(8)
-                .map(|bits| {
-                    let mut byte = 0u8;
-                    for (i, &bit) in bits.into_iter().enumerate() {
-                        if bit {
-                            byte += 1 << i;
-                        }
-                    }
-                    byte
-                })
-                .collect::<Vec<_>>();
-
-            output.push(F::from_le_bytes_mod_order(nonnative_bytes.as_slice()));
-        }
-
-        output
+        squeeze_field_elements_with_sizes_default_impl(self, sizes)
     }
 
     /// Squeeze `num_elements` nonnative field elements from the sponge.
@@ -173,7 +181,7 @@ pub trait FieldBasedCryptographicSponge<CF: PrimeField>: CryptographicSponge {
         if all_full_sizes {
             self.squeeze_native_field_elements(sizes.len())
         } else {
-            self.squeeze_field_elements_with_sizes::<CF>(sizes)
+            squeeze_field_elements_with_sizes_default_impl(self, sizes)
         }
     }
 }

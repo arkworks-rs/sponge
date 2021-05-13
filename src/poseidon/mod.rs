@@ -1,6 +1,6 @@
 use crate::{
-    batch_field_cast, Absorb, CryptographicSponge, FieldBasedCryptographicSponge, FieldElementSize,
-    SpongeExt,
+    batch_field_cast, squeeze_field_elements_with_sizes_default_impl, Absorb, CryptographicSponge,
+    FieldBasedCryptographicSponge, FieldElementSize, SpongeExt,
 };
 use ark_ff::{BigInteger, FpParameters, PrimeField};
 use ark_std::any::TypeId;
@@ -311,6 +311,24 @@ impl<F: PrimeField> CryptographicSponge for PoseidonSponge<F> {
 
         bits.truncate(num_bits);
         bits
+    }
+
+    fn squeeze_field_elements_with_sizes<F2: PrimeField>(
+        &mut self,
+        sizes: &[FieldElementSize],
+    ) -> Vec<F2> {
+        if F::characteristic() == F2::characteristic() {
+            // native case
+            let mut buf = Vec::with_capacity(sizes.len());
+            batch_field_cast(
+                &self.squeeze_native_field_elements_with_sizes(sizes),
+                &mut buf,
+            )
+            .unwrap();
+            buf
+        } else {
+            squeeze_field_elements_with_sizes_default_impl(self, sizes)
+        }
     }
 
     fn squeeze_field_elements<F2: PrimeField>(&mut self, num_elements: usize) -> Vec<F2> {
