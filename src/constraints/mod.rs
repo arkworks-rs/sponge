@@ -172,13 +172,7 @@ pub trait CryptographicSpongeVar<CF: PrimeField, S: CryptographicSponge>: Clone 
 
         Ok(new_sponge)
     }
-}
 
-/// The interface for field-based cryptographic sponge.
-/// `CF` is the constraint field and the native field used by the cryptographic sponge implementation.
-pub trait FieldBasedCryptographicSpongeVar<CF: PrimeField, S: CryptographicSponge>:
-    CryptographicSpongeVar<CF, S>
-{
     /// Squeeze `num_elements` field elements from the sponge.
     fn squeeze_field_elements(
         &mut self,
