@@ -1,5 +1,5 @@
-use crate::constraints::{AbsorbGadget, FieldBasedCryptographicSpongeVar};
 use crate::constraints::CryptographicSpongeVar;
+use crate::constraints::{AbsorbGadget, FieldBasedCryptographicSpongeVar};
 use crate::poseidon::{PoseidonParameters, PoseidonSponge, PoseidonSpongeMode};
 use ark_ff::{FpParameters, PrimeField};
 use ark_r1cs_std::fields::fp::FpVar;
@@ -229,7 +229,7 @@ impl<F: PrimeField> CryptographicSpongeVar<F, PoseidonSponge<F>> for PoseidonSpo
 
     #[tracing::instrument(target = "r1cs", skip(self, input))]
     fn absorb(&mut self, input: &impl AbsorbGadget<F>) -> Result<(), SynthesisError> {
-        let input = input.to_sponge_field_elements()?;
+        let input = input.to_sponge_field_elements_var()?;
         if input.is_empty() {
             return Ok(());
         }
@@ -287,8 +287,9 @@ impl<F: PrimeField> CryptographicSpongeVar<F, PoseidonSponge<F>> for PoseidonSpo
     }
 }
 
-
-impl<F: PrimeField> FieldBasedCryptographicSpongeVar<F, PoseidonSponge<F>> for PoseidonSpongeVar<F> {
+impl<F: PrimeField> FieldBasedCryptographicSpongeVar<F, PoseidonSponge<F>>
+    for PoseidonSpongeVar<F>
+{
     #[tracing::instrument(target = "r1cs", skip(self))]
     fn squeeze_field_elements(
         &mut self,
@@ -319,7 +320,7 @@ impl<F: PrimeField> FieldBasedCryptographicSpongeVar<F, PoseidonSponge<F>> for P
 
 #[cfg(test)]
 mod tests {
-    use crate::constraints::CryptographicSpongeVar;
+    use crate::constraints::{CryptographicSpongeVar, FieldBasedCryptographicSpongeVar};
     use crate::poseidon::constraints::PoseidonSpongeVar;
     use crate::poseidon::tests::poseidon_parameters_for_test;
     use crate::poseidon::PoseidonSponge;
