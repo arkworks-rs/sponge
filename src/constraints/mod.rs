@@ -1,4 +1,4 @@
-use crate::{Absorb, FieldBasedCryptographicSponge, FieldElementSize};
+use crate::{Absorb, FieldElementSize, CryptographicSponge};
 use ark_ff::PrimeField;
 use ark_nonnative_field::params::{get_params, OptimizationType};
 use ark_nonnative_field::{AllocatedNonNativeFieldVar, NonNativeFieldVar};
@@ -88,11 +88,10 @@ pub fn bits_le_to_nonnative<'a, F: PrimeField, CF: PrimeField>(
     Ok(output)
 }
 
-/// The interface for a cryptographic sponge.
+/// The interface for a cryptographic sponge constraints on field `CF`.
 /// A sponge can `absorb` or take in inputs and later `squeeze` or output bytes or field elements.
 /// The outputs are dependent on previous `absorb` and `squeeze` calls.
-/// For now, `CryptographicSpongeVar` only supports field-based sponge.
-pub trait CryptographicSpongeVar<CF: PrimeField, S: FieldBasedCryptographicSponge<CF>>:
+pub trait CryptographicSpongeVar<CF: PrimeField, S: CryptographicSponge>:
     Clone
 {
     /// Parameters used by the sponge.
@@ -112,12 +111,6 @@ pub trait CryptographicSpongeVar<CF: PrimeField, S: FieldBasedCryptographicSpong
 
     /// Squeeze `num_bit` bits from the sponge.
     fn squeeze_bits(&mut self, num_bits: usize) -> Result<Vec<Boolean<CF>>, SynthesisError>;
-
-    /// Squeeze `num_elements` field elements from the sponge.
-    fn squeeze_field_elements(
-        &mut self,
-        num_elements: usize,
-    ) -> Result<Vec<FpVar<CF>>, SynthesisError>;
 
     /// Squeeze `sizes.len()` nonnative field elements from the sponge, where the `i`-th element of
     /// the output has size `sizes[i]`.
@@ -181,4 +174,14 @@ pub trait CryptographicSpongeVar<CF: PrimeField, S: FieldBasedCryptographicSpong
 
         Ok(new_sponge)
     }
+}
+
+/// The interface for field-based cryptographic sponge.
+/// `CF` is the constraint field and the native field used by the cryptographic sponge implementation.
+pub trait FieldBasedCryptographicSpongeVar<CF: PrimeField, S: CryptographicSponge>: CryptographicSpongeVar<CF, S>{
+    /// Squeeze `num_elements` field elements from the sponge.
+    fn squeeze_field_elements(
+        &mut self,
+        num_elements: usize,
+    ) -> Result<Vec<FpVar<CF>>, SynthesisError>;
 }

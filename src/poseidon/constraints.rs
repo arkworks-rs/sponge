@@ -1,4 +1,4 @@
-use crate::constraints::AbsorbGadget;
+use crate::constraints::{AbsorbGadget, FieldBasedCryptographicSpongeVar};
 use crate::constraints::CryptographicSpongeVar;
 use crate::poseidon::{PoseidonParameters, PoseidonSponge, PoseidonSpongeMode};
 use ark_ff::{FpParameters, PrimeField};
@@ -285,7 +285,10 @@ impl<F: PrimeField> CryptographicSpongeVar<F, PoseidonSponge<F>> for PoseidonSpo
         bits.truncate(num_bits);
         Ok(bits)
     }
+}
 
+
+impl<F: PrimeField> FieldBasedCryptographicSpongeVar<F, PoseidonSponge<F>> for PoseidonSpongeVar<F> {
     #[tracing::instrument(target = "r1cs", skip(self))]
     fn squeeze_field_elements(
         &mut self,
