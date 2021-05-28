@@ -334,9 +334,9 @@ impl<F: PrimeField> CryptographicSponge for PoseidonSponge<F> {
     fn squeeze_field_elements<F2: PrimeField>(&mut self, num_elements: usize) -> Vec<F2> {
         if TypeId::of::<F>() == TypeId::of::<F2>() {
             let result = self.squeeze_native_field_elements(num_elements);
-            let mut casted = Vec::with_capacity(result.len());
-            batch_field_cast(&result, &mut casted).unwrap();
-            casted
+            let mut cast = Vec::with_capacity(result.len());
+            batch_field_cast(&result, &mut cast).unwrap();
+            cast
         } else {
             self.squeeze_field_elements_with_sizes::<F2>(
                 vec![FieldElementSize::Full; num_elements].as_slice(),

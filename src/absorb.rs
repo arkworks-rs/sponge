@@ -99,9 +99,8 @@ pub trait AbsorbWithLength: Absorb {
     }
 }
 
-/// If `F1` and `F2` are the same type, return `input` but cast to `F2`, and panic otherwise.
-/// ## Panics
-/// This function will panic if `F1` is not equal to `F2`.
+/// If `F1` and `F2` have the same prime modulus, this method returns `Some(input)`
+/// but cast to `F2`, and returns `None` otherwise.
 pub(crate) fn field_cast<F1: PrimeField, F2: PrimeField>(input: F1) -> Option<F2> {
     if F1::characteristic() != F2::characteristic() {
         // Trying to absorb non-native field elements.
