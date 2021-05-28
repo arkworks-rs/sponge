@@ -229,7 +229,7 @@ impl<F: PrimeField> CryptographicSpongeVar<F, PoseidonSponge<F>> for PoseidonSpo
 
     #[tracing::instrument(target = "r1cs", skip(self, input))]
     fn absorb(&mut self, input: &impl AbsorbGadget<F>) -> Result<(), SynthesisError> {
-        let input = input.to_sponge_field_elements_var()?;
+        let input = input.to_sponge_field_elements()?;
         if input.is_empty() {
             return Ok(());
         }

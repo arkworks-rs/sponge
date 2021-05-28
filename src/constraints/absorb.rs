@@ -17,31 +17,31 @@ use ark_std::vec::Vec;
 pub trait AbsorbGadget<F: PrimeField> {
     /// Converts the object into a list of bytes that can be absorbed by a `CryptographicSpongeVar`.
     /// return the list.
-    fn to_sponge_bytes_var(&self) -> Result<Vec<UInt8<F>>, SynthesisError>;
+    fn to_sponge_bytes(&self) -> Result<Vec<UInt8<F>>, SynthesisError>;
 
     /// Specifies the conversion into a list of bytes for a batch.
-    fn batch_to_sponge_bytes_var(batch: &[Self]) -> Result<Vec<UInt8<F>>, SynthesisError>
+    fn batch_to_sponge_bytes(batch: &[Self]) -> Result<Vec<UInt8<F>>, SynthesisError>
     where
         Self: Sized,
     {
         let mut result = Vec::new();
         for item in batch {
-            result.append(&mut (item.to_sponge_bytes_var()?))
+            result.append(&mut (item.to_sponge_bytes()?))
         }
         Ok(result)
     }
 
     /// Converts the object into field elements that can be absorbed by a `CryptographicSpongeVar`.
-    fn to_sponge_field_elements_var(&self) -> Result<Vec<FpVar<F>>, SynthesisError>;
+    fn to_sponge_field_elements(&self) -> Result<Vec<FpVar<F>>, SynthesisError>;
 
     /// Specifies the conversion into a list of field elements for a batch.
-    fn batch_to_sponge_field_elements_var(batch: &[Self]) -> Result<Vec<FpVar<F>>, SynthesisError>
+    fn batch_to_sponge_field_elements(batch: &[Self]) -> Result<Vec<FpVar<F>>, SynthesisError>
     where
         Self: Sized,
     {
         let mut output = Vec::new();
         for absorbable in batch {
-            output.append(&mut absorbable.to_sponge_field_elements_var()?);
+            output.append(&mut absorbable.to_sponge_field_elements()?);
         }
 
         Ok(output)
@@ -49,15 +49,17 @@ pub trait AbsorbGadget<F: PrimeField> {
 }
 
 impl<F: PrimeField> AbsorbGadget<F> for UInt8<F> {
-    fn to_sponge_bytes_var(&self) -> Result<Vec<UInt8<F>>, SynthesisError> {
+    fn to_sponge_bytes(&self) -> Result<Vec<UInt8<F>>, SynthesisError> {
         Ok(vec![self.clone()])
     }
 
-    fn to_sponge_field_elements_var(&self) -> Result<Vec<FpVar<F>>, SynthesisError> {
+    fn to_sponge_field_elements(&self) -> Result<Vec<FpVar<F>>, SynthesisError> {
         vec![self.clone()].to_constraint_field()
     }
 
-    fn batch_to_sponge_field_elements_var(batch: &[Self]) -> Result<Vec<FpVar<F>>, SynthesisError> {
+    fn batch_to_sponge_field_elements(batch: &[Self]) -> Result<Vec<FpVar<F>>, SynthesisError> {
+        // It's okay to allocate as constant because at circuit-generation time,
+        // the length must be statically known (it cannot vary with the variable assignments).
         let mut bytes = UInt8::constant_vec((batch.len() as u64).to_le_bytes().as_ref());
         bytes.extend_from_slice(batch);
         bytes.to_constraint_field()
@@ -65,25 +67,25 @@ impl<F: PrimeField> AbsorbGadget<F> for UInt8<F> {
 }
 
 impl<F: PrimeField> AbsorbGadget<F> for Boolean<F> {
-    fn to_sponge_bytes_var(&self) -> Result<Vec<UInt8<F>>, SynthesisError> {
+    fn to_sponge_bytes(&self) -> Result<Vec<UInt8<F>>, SynthesisError> {
         self.to_bytes()
     }
 
-    fn to_sponge_field_elements_var(&self) -> Result<Vec<FpVar<F>>, SynthesisError> {
+    fn to_sponge_field_elements(&self) -> Result<Vec<FpVar<F>>, SynthesisError> {
         Ok(vec![FpVar::from(self.clone())])
     }
 }
 
 impl<F: PrimeField> AbsorbGadget<F> for FpVar<F> {
-    fn to_sponge_bytes_var(&self) -> Result<Vec<UInt8<F>>, SynthesisError> {
+    fn to_sponge_bytes(&self) -> Result<Vec<UInt8<F>>, SynthesisError> {
         self.to_bytes()
     }
 
-    fn to_sponge_field_elements_var(&self) -> Result<Vec<FpVar<F>>, SynthesisError> {
+    fn to_sponge_field_elements(&self) -> Result<Vec<FpVar<F>>, SynthesisError> {
         Ok(vec![self.clone()])
     }
 
-    fn batch_to_sponge_field_elements_var(batch: &[Self]) -> Result<Vec<FpVar<F>>, SynthesisError> {
+    fn batch_to_sponge_field_elements(batch: &[Self]) -> Result<Vec<FpVar<F>>, SynthesisError> {
         Ok(batch.to_vec())
     }
 }
@@ -97,13 +99,13 @@ macro_rules! impl_absorbable_group {
             for<'a> &'a F: FieldOpsBounds<'a, P::BaseField, F>,
             F: ToConstraintFieldGadget<<P::BaseField as Field>::BasePrimeField>,
         {
-            fn to_sponge_bytes_var(
+            fn to_sponge_bytes(
                 &self,
             ) -> Result<Vec<UInt8<<P::BaseField as Field>::BasePrimeField>>, SynthesisError> {
-                self.to_constraint_field()?.to_sponge_bytes_var()
+                self.to_constraint_field()?.to_sponge_bytes()
             }
 
-            fn to_sponge_field_elements_var(
+            fn to_sponge_field_elements(
                 &self,
             ) -> Result<Vec<FpVar<<P::BaseField as Field>::BasePrimeField>>, SynthesisError> {
                 self.to_constraint_field()
@@ -122,7 +124,7 @@ where
     for<'a> &'a F: FieldOpsBounds<'a, P::BaseField, F>,
     F: ToConstraintFieldGadget<<P::BaseField as Field>::BasePrimeField>,
 {
-    fn to_sponge_bytes_var(
+    fn to_sponge_bytes(
         &self,
     ) -> Result<
         Vec<UInt8<<<P as ModelParameters>::BaseField as Field>::BasePrimeField>>,
@@ -131,62 +133,62 @@ where
         self.to_bytes()
     }
 
-    fn to_sponge_field_elements_var(
+    fn to_sponge_field_elements(
         &self,
     ) -> Result<
         Vec<FpVar<<<P as ModelParameters>::BaseField as Field>::BasePrimeField>>,
         SynthesisError,
     > {
-        self.to_affine()?.to_sponge_field_elements_var()
+        self.to_affine()?.to_sponge_field_elements()
     }
 }
 
 impl<F: PrimeField, A: AbsorbGadget<F>> AbsorbGadget<F> for &[A] {
-    fn to_sponge_bytes_var(&self) -> Result<Vec<UInt8<F>>, SynthesisError> {
-        A::batch_to_sponge_bytes_var(self)
+    fn to_sponge_bytes(&self) -> Result<Vec<UInt8<F>>, SynthesisError> {
+        A::batch_to_sponge_bytes(self)
     }
 
-    fn to_sponge_field_elements_var(&self) -> Result<Vec<FpVar<F>>, SynthesisError> {
-        A::batch_to_sponge_field_elements_var(self)
+    fn to_sponge_field_elements(&self) -> Result<Vec<FpVar<F>>, SynthesisError> {
+        A::batch_to_sponge_field_elements(self)
     }
 }
 
 impl<F: PrimeField, A: AbsorbGadget<F>> AbsorbGadget<F> for Vec<A> {
-    fn to_sponge_bytes_var(&self) -> Result<Vec<UInt8<F>>, SynthesisError> {
-        self.as_slice().to_sponge_bytes_var()
+    fn to_sponge_bytes(&self) -> Result<Vec<UInt8<F>>, SynthesisError> {
+        self.as_slice().to_sponge_bytes()
     }
 
-    fn to_sponge_field_elements_var(&self) -> Result<Vec<FpVar<F>>, SynthesisError> {
-        self.as_slice().to_sponge_field_elements_var()
+    fn to_sponge_field_elements(&self) -> Result<Vec<FpVar<F>>, SynthesisError> {
+        self.as_slice().to_sponge_field_elements()
     }
 }
 
 impl<F: PrimeField, A: AbsorbGadget<F>> AbsorbGadget<F> for Option<A> {
-    fn to_sponge_bytes_var(&self) -> Result<Vec<UInt8<F>>, SynthesisError> {
+    fn to_sponge_bytes(&self) -> Result<Vec<UInt8<F>>, SynthesisError> {
         let mut output = Vec::new();
-        output.append(&mut (Boolean::Constant(self.is_some()).to_sponge_bytes_var()?));
+        output.append(&mut (Boolean::Constant(self.is_some()).to_sponge_bytes()?));
         if let Some(item) = self {
-            output.append(&mut (item.to_sponge_bytes_var()?))
+            output.append(&mut (item.to_sponge_bytes()?))
         }
         Ok(output)
     }
 
-    fn to_sponge_field_elements_var(&self) -> Result<Vec<FpVar<F>>, SynthesisError> {
+    fn to_sponge_field_elements(&self) -> Result<Vec<FpVar<F>>, SynthesisError> {
         let mut output = vec![FpVar::from(Boolean::constant(self.is_some()))];
         if let Some(absorbable) = self.as_ref() {
-            output.append(&mut absorbable.to_sponge_field_elements_var()?);
+            output.append(&mut absorbable.to_sponge_field_elements()?);
         }
         Ok(output)
     }
 }
 
 impl<F: PrimeField, A: AbsorbGadget<F>> AbsorbGadget<F> for &A {
-    fn to_sponge_bytes_var(&self) -> Result<Vec<UInt8<F>>, SynthesisError> {
-        (*self).to_sponge_bytes_var()
+    fn to_sponge_bytes(&self) -> Result<Vec<UInt8<F>>, SynthesisError> {
+        (*self).to_sponge_bytes()
     }
 
-    fn to_sponge_field_elements_var(&self) -> Result<Vec<FpVar<F>>, SynthesisError> {
-        (*self).to_sponge_field_elements_var()
+    fn to_sponge_field_elements(&self) -> Result<Vec<FpVar<F>>, SynthesisError> {
+        (*self).to_sponge_field_elements()
     }
 }
 
@@ -209,7 +211,7 @@ macro_rules! collect_sponge_field_elements_gadget {
         {
             let mut output = AbsorbGadget::to_sponge_field_elements(&$head)?;
             $(
-                output.append(&mut AbsorbGadget::to_sponge_field_elements_var(&$tail)?);
+                output.append(&mut AbsorbGadget::to_sponge_field_elements(&$tail)?);
             )*
 
             Ok(output)
@@ -240,7 +242,7 @@ mod tests {
         let data_var = UInt8::new_input_vec(ns!(cs, "u8data"), &data).unwrap();
 
         let native_bytes = data.to_sponge_bytes_as_vec();
-        let constraint_bytes = data_var.to_sponge_bytes_var().unwrap();
+        let constraint_bytes = data_var.to_sponge_bytes().unwrap();
 
         assert_eq!(constraint_bytes.value().unwrap(), native_bytes);
 
@@ -253,7 +255,7 @@ mod tests {
             .collect();
 
         let native_bytes = data.to_sponge_bytes_as_vec();
-        let constraint_bytes = data_var.to_sponge_bytes_var().unwrap();
+        let constraint_bytes = data_var.to_sponge_bytes().unwrap();
         assert_eq!(constraint_bytes.value().unwrap(), native_bytes);
 
         assert!(cs.is_satisfied().unwrap())

@@ -113,7 +113,7 @@ pub(crate) fn field_cast<F1: PrimeField, F2: PrimeField>(input: F1) -> Option<F2
     }
 }
 
-/// If `F1` equals to `F2`, add all elements of x as `F2` to `dest` and returns `dest` pointer.
+/// If `F1` equals to `F2`, add all elements of `x` as `F2` to `dest` and returns `dest` pointer.
 ///
 /// This function will return None and no-op if `F1` is not equal to `F2`.
 pub(crate) fn batch_field_cast<'a, F1: PrimeField, F2: PrimeField>(
