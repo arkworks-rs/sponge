@@ -170,6 +170,7 @@ impl<F: PrimeField> CryptographicSponge<F> for PoseidonSponge<F> {
 
     fn absorb(&mut self, input: &impl Absorbable<F>) {
         let elems = input.to_sponge_field_elements();
+      
         if elems.is_empty() {
             return;
         }
@@ -213,7 +214,7 @@ impl<F: PrimeField> CryptographicSponge<F> for PoseidonSponge<F> {
 
         let num_elements = (num_bits + usable_bits - 1) / usable_bits;
         let src_elements = self.squeeze_field_elements(num_elements);
-
+      
         let mut bits: Vec<bool> = Vec::with_capacity(usable_bits * num_elements);
         for elem in &src_elements {
             let elem_bits = elem.into_repr().to_bits_le();

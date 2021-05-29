@@ -2,10 +2,12 @@ use crate::constraints::AbsorbableGadget;
 use crate::constraints::CryptographicSpongeVar;
 use crate::poseidon::{PoseidonSponge, PoseidonSpongeParameters};
 use crate::DuplexSpongeMode;
+
 use ark_ff::{FpParameters, PrimeField};
 use ark_r1cs_std::fields::fp::FpVar;
 use ark_r1cs_std::prelude::*;
 use ark_relations::r1cs::{ConstraintSystemRef, SynthesisError};
+
 use ark_std::{vec, vec::Vec};
 
 #[derive(Clone, Debug)]
@@ -81,6 +83,7 @@ impl<F: PrimeField> PoseidonSpongeVar<F> {
             self.apply_s_box(&mut state, true)?;
             self.apply_mds(&mut state)?;
         }
+
         for i in full_rounds_over_2..(full_rounds_over_2 + self.params.partial_rounds) {
             self.apply_ark(&mut state, i as usize)?;
             self.apply_s_box(&mut state, false)?;
@@ -259,5 +262,62 @@ impl<F: PrimeField> CryptographicSpongeVar<F, PoseidonSponge<F>> for PoseidonSpo
         };
 
         Ok(squeezed_elems.to_vec())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::constraints::CryptographicSpongeVar;
+    use crate::poseidon::constraints::PoseidonSpongeVar;
+    use crate::poseidon::tests::poseidon_parameters_for_test;
+    use crate::poseidon::PoseidonSponge;
+    use crate::{CryptographicSponge, FieldBasedCryptographicSponge};
+    use ark_ff::UniformRand;
+    use ark_r1cs_std::fields::fp::FpVar;
+    use ark_r1cs_std::prelude::*;
+    use ark_relations::r1cs::ConstraintSystem;
+    use ark_relations::*;
+    use ark_std::test_rng;
+    use ark_test_curves::bls12_381::Fr;
+
+    #[test]
+    fn absorb_test() {
+        let mut rng = test_rng();
+        let cs = ConstraintSystem::new_ref();
+
+        let absorb1: Vec<_> = (0..256).map(|_| Fr::rand(&mut rng)).collect();
+        let absorb1_var: Vec<_> = absorb1
+            .iter()
+            .map(|v| FpVar::new_input(ns!(cs, "absorb1"), || Ok(*v)).unwrap())
+            .collect();
+
+        let absorb2: Vec<_> = (0..8).map(|i| vec![i, i + 1, i + 2]).collect();
+        let absorb2_var: Vec<_> = absorb2
+            .iter()
+            .map(|v| UInt8::new_input_vec(ns!(cs, "absorb2"), v).unwrap())
+            .collect();
+
+        let sponge_params = poseidon_parameters_for_test();
+
+        let mut native_sponge = PoseidonSponge::<Fr>::new(&sponge_params);
+        let mut constraint_sponge = PoseidonSpongeVar::<Fr>::new(cs.clone(), &sponge_params);
+
+        native_sponge.absorb(&absorb1);
+        constraint_sponge.absorb(&absorb1_var).unwrap();
+
+        let squeeze1 = native_sponge.squeeze_native_field_elements(1);
+        let squeeze2 = constraint_sponge.squeeze_field_elements(1).unwrap();
+
+        assert_eq!(squeeze2.value().unwrap(), squeeze1);
+        assert!(cs.is_satisfied().unwrap());
+
+        native_sponge.absorb(&absorb2);
+        constraint_sponge.absorb(&absorb2_var).unwrap();
+
+        let squeeze1 = native_sponge.squeeze_native_field_elements(1);
+        let squeeze2 = constraint_sponge.squeeze_field_elements(1).unwrap();
+
+        assert_eq!(squeeze2.value().unwrap(), squeeze1);
+        assert!(cs.is_satisfied().unwrap());
     }
 }

@@ -1,21 +1,29 @@
 [package]
 name = "ark-sponge"
-version = "0.1.0"
+version = "0.2.0"
 authors = []
 edition = "2018"
 
+[profile.release]
+opt-level = 3
+lto = "thin"
+incremental = true
+panic = 'abort'
+
 [dependencies]
-ark-ec = { git = "https://github.com/arkworks-rs/algebra/", default_features = false }
-ark-ff = { git = "https://github.com/arkworks-rs/algebra/", default_features = false }
-ark-std = { git = "https://github.com/arkworks-rs/utils", default-features = false }
+ark-ec = { version = "^0.2.0", default_features = false }
+ark-ff = { version = "^0.2.0", default_features = false }
+ark-serialize = { version = "0.2.0", default_features = false}
+ark-std = { version = "^0.2.0", default-features = false }
 derivative = { version = "2.1.1", features = [ "use_core" ] }
 digest = { version = "0.9.0", default_features = false }
-rand = { version = "0.7", default-features = false }
+rand_core = { version = "0.5" }
+rand_chacha = { version = "0.2.1", default-features = false }
 
 # Dependencies for r1cs
-ark-nonnative-field = { git = "https://github.com/arkworks-rs/nonnative", default-features = false, optional = true }
-ark-r1cs-std = { git = "https://github.com/arkworks-rs/r1cs-std", default-features = false, optional = true }
-ark-relations = { git = "https://github.com/arkworks-rs/snark", default-features = false, optional = true }
+ark-nonnative-field = { version = "^0.2.0", default-features = false, optional = true }
+ark-r1cs-std = { version = "^0.2.0", default-features = false, optional = true }
+ark-relations = { version = "^0.2.0", default-features = false, optional = true }
 tracing = { version = "0.1", default-features = false, features = [ "attributes" ], optional = true }
 
 [dev-dependencies]
@@ -24,6 +32,6 @@ ark-nonnative-field = { git = "https://github.com/arkworks-rs/nonnative", defaul
 ark-pallas = { git = "https://github.com/arkworks-rs/curves", features = [ "r1cs" ] }
 
 [features]
-default = [ "r1cs" ]
+default = [ "r1cs", "std" ]
 r1cs = [ "ark-nonnative-field", "ark-relations", "ark-r1cs-std", "tracing" ]
-std = [ "ark-ec/std", "ark-ff/std", "ark-nonnative-field/std", "ark-r1cs-std/std", "ark-relations/std", "ark-std/std" ]
+std = [ "ark-ec/std", "ark-ff/std", "ark-nonnative-field/std", "ark-r1cs-std/std", "ark-relations/std", "ark-std/std", "ark-serialize/std" ]

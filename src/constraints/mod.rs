@@ -1,4 +1,5 @@
 use crate::{Absorbable, CryptographicSponge, FieldElementSize};
+
 use ark_ff::PrimeField;
 use ark_nonnative_field::params::{get_params, OptimizationType};
 use ark_nonnative_field::{AllocatedNonNativeFieldVar, NonNativeFieldVar};
@@ -9,6 +10,7 @@ use ark_r1cs_std::fields::fp::{AllocatedFp, FpVar};
 use ark_r1cs_std::R1CSVar;
 use ark_relations::lc;
 use ark_relations::r1cs::{ConstraintSystemRef, LinearCombination, SynthesisError};
+
 use ark_std::{vec, vec::Vec};
 
 mod absorbable;
