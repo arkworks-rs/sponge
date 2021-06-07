@@ -1,3 +1,15 @@
-# Initial release (v0.2.0)
+# CHANGELOG
 
-{TODO: Description of what exactly we include in the initial release}
+## Pending
+
+### Breaking changes
+
+### Features
+
+### Improvements
+
+### Bug fixes
+
+## v0.3.0
+
+- initial release
