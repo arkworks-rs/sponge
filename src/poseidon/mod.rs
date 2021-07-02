@@ -207,10 +207,10 @@ impl<F: PrimeField> PoseidonParameters<F> {
     }
 
     /// Return a random round constant.
-    pub fn random_ark<R: Rng>(full_rounds: u32, rng: &mut R) -> Vec<Vec<F>> {
+    pub fn random_ark<R: Rng>(full_rounds: u32, partial_rounds: u32, rng: &mut R) -> Vec<Vec<F>> {
         let mut ark = Vec::new();
 
-        for _ in 0..full_rounds {
+        for _ in 0..full_rounds + partial_rounds {
             let mut res = Vec::new();
 
             for _ in 0..3 {
