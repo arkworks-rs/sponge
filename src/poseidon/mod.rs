@@ -17,6 +17,8 @@ mod tests;
 pub mod traits;
 pub use traits::*;
 
+mod grain_lfsr;
+
 /// Parameters and RNG used
 #[derive(Clone, Debug)]
 pub struct PoseidonParameters<F: PrimeField> {
