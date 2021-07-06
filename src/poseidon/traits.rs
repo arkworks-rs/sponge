@@ -1,7 +1,7 @@
 use crate::poseidon::grain_lfsr::PoseidonGrainLFSR;
 use crate::poseidon::PoseidonParameters;
 use ark_ff::{fields::models::*, FpParameters, PrimeField};
-use ark_relations::r1cs::OptimizationGoal;
+use ark_std::{vec, vec::Vec};
 
 /// A trait for default Poseidon parameters associated with a prime field
 pub trait PoseidonDefaultParameters: FpParameters {
@@ -25,17 +25,15 @@ pub trait PoseidonDefaultParametersField: PrimeField {
     /// with a specific optimization goal.
     fn get_default_parameters(
         rate: usize,
-        optimization_goal: OptimizationGoal,
+        optimized_for_constraints: bool,
     ) -> Option<PoseidonParameters<Self>>;
 
     /// Internal function that uses the `PoseidonDefaultParameters` to compute the Poseidon parameters.
     fn get_default_parameters_internal<P: PoseidonDefaultParameters>(
         rate: usize,
-        optimization_goal: OptimizationGoal,
+        optimized_for_constraints: bool,
     ) -> Option<PoseidonParameters<Self>> {
-        let params_set = if optimization_goal == OptimizationGoal::Constraints
-            || optimization_goal == OptimizationGoal::None
-        {
+        let params_set = if !optimized_for_constraints {
             P::PARAMS_OPT_FOR_CONSTRAINTS
         } else {
             P::PARAMS_OPT_FOR_WEIGHTS
@@ -116,9 +114,9 @@ macro_rules! impl_poseidon_default_parameters_field {
         impl<P: $params + PoseidonDefaultParameters> PoseidonDefaultParametersField for $field<P> {
             fn get_default_parameters(
                 rate: usize,
-                optimization_goal: OptimizationGoal,
+                optimized_for_constraints: bool,
             ) -> Option<PoseidonParameters<Self>> {
-                Self::get_default_parameters_internal::<P>(rate, optimization_goal)
+                Self::get_default_parameters_internal::<P>(rate, optimized_for_constraints)
             }
         }
     };
@@ -137,7 +135,6 @@ mod test {
     use crate::poseidon::{PoseidonDefaultParameters, PoseidonDefaultParametersField};
     use ark_ff::{field_new, fields::Fp256};
     use ark_ff::{BigInteger256, FftParameters, Fp256Parameters, FpParameters};
-    use ark_relations::r1cs::OptimizationGoal;
     use ark_test_curves::bls12_381::FrParameters;
 
     pub struct TestFrParameters;
@@ -191,8 +188,7 @@ mod test {
     #[test]
     fn bls12_381_fr_poseidon_default_parameters_test() {
         // constraints
-        let constraints_rate_2 =
-            TestFr::get_default_parameters(2, OptimizationGoal::Constraints).unwrap();
+        let constraints_rate_2 = TestFr::get_default_parameters(2, false).unwrap();
         assert_eq!(
             constraints_rate_2.ark[0][0],
             field_new!(
@@ -208,8 +204,7 @@ mod test {
             )
         );
 
-        let constraints_rate_3 =
-            TestFr::get_default_parameters(3, OptimizationGoal::Constraints).unwrap();
+        let constraints_rate_3 = TestFr::get_default_parameters(3, false).unwrap();
         assert_eq!(
             constraints_rate_3.ark[0][0],
             field_new!(
@@ -225,8 +220,7 @@ mod test {
             )
         );
 
-        let constraints_rate_4 =
-            TestFr::get_default_parameters(4, OptimizationGoal::Constraints).unwrap();
+        let constraints_rate_4 = TestFr::get_default_parameters(4, false).unwrap();
         assert_eq!(
             constraints_rate_4.ark[0][0],
             field_new!(
@@ -242,8 +236,7 @@ mod test {
             )
         );
 
-        let constraints_rate_5 =
-            TestFr::get_default_parameters(5, OptimizationGoal::Constraints).unwrap();
+        let constraints_rate_5 = TestFr::get_default_parameters(5, false).unwrap();
         assert_eq!(
             constraints_rate_5.ark[0][0],
             field_new!(
@@ -259,8 +252,7 @@ mod test {
             )
         );
 
-        let constraints_rate_6 =
-            TestFr::get_default_parameters(6, OptimizationGoal::Constraints).unwrap();
+        let constraints_rate_6 = TestFr::get_default_parameters(6, false).unwrap();
         assert_eq!(
             constraints_rate_6.ark[0][0],
             field_new!(
@@ -276,8 +268,7 @@ mod test {
             )
         );
 
-        let constraints_rate_7 =
-            TestFr::get_default_parameters(7, OptimizationGoal::Constraints).unwrap();
+        let constraints_rate_7 = TestFr::get_default_parameters(7, false).unwrap();
         assert_eq!(
             constraints_rate_7.ark[0][0],
             field_new!(
@@ -293,8 +284,7 @@ mod test {
             )
         );
 
-        let constraints_rate_8 =
-            TestFr::get_default_parameters(8, OptimizationGoal::Constraints).unwrap();
+        let constraints_rate_8 = TestFr::get_default_parameters(8, false).unwrap();
         assert_eq!(
             constraints_rate_8.ark[0][0],
             field_new!(
@@ -311,7 +301,7 @@ mod test {
         );
 
         // weights
-        let weights_rate_2 = TestFr::get_default_parameters(2, OptimizationGoal::Weight).unwrap();
+        let weights_rate_2 = TestFr::get_default_parameters(2, true).unwrap();
         assert_eq!(
             weights_rate_2.ark[0][0],
             field_new!(
@@ -327,7 +317,7 @@ mod test {
             )
         );
 
-        let weights_rate_3 = TestFr::get_default_parameters(3, OptimizationGoal::Weight).unwrap();
+        let weights_rate_3 = TestFr::get_default_parameters(3, true).unwrap();
         assert_eq!(
             weights_rate_3.ark[0][0],
             field_new!(
@@ -343,7 +333,7 @@ mod test {
             )
         );
 
-        let weights_rate_4 = TestFr::get_default_parameters(4, OptimizationGoal::Weight).unwrap();
+        let weights_rate_4 = TestFr::get_default_parameters(4, true).unwrap();
         assert_eq!(
             weights_rate_4.ark[0][0],
             field_new!(
@@ -359,7 +349,7 @@ mod test {
             )
         );
 
-        let weights_rate_5 = TestFr::get_default_parameters(5, OptimizationGoal::Weight).unwrap();
+        let weights_rate_5 = TestFr::get_default_parameters(5, true).unwrap();
         assert_eq!(
             weights_rate_5.ark[0][0],
             field_new!(
@@ -375,7 +365,7 @@ mod test {
             )
         );
 
-        let weights_rate_6 = TestFr::get_default_parameters(6, OptimizationGoal::Weight).unwrap();
+        let weights_rate_6 = TestFr::get_default_parameters(6, true).unwrap();
         assert_eq!(
             weights_rate_6.ark[0][0],
             field_new!(
@@ -391,7 +381,7 @@ mod test {
             )
         );
 
-        let weights_rate_7 = TestFr::get_default_parameters(7, OptimizationGoal::Weight).unwrap();
+        let weights_rate_7 = TestFr::get_default_parameters(7, true).unwrap();
         assert_eq!(
             weights_rate_7.ark[0][0],
             field_new!(
@@ -407,7 +397,7 @@ mod test {
             )
         );
 
-        let weights_rate_8 = TestFr::get_default_parameters(8, OptimizationGoal::Weight).unwrap();
+        let weights_rate_8 = TestFr::get_default_parameters(8, true).unwrap();
         assert_eq!(
             weights_rate_8.ark[0][0],
             field_new!(

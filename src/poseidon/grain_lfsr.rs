@@ -2,6 +2,7 @@
 
 use ark_ff::{BigInteger, FpParameters, PrimeField};
 use ark_std::cmp::Ordering;
+use ark_std::vec::Vec;
 
 pub struct PoseidonGrainLFSR {
     pub prime_num_bits: u64,
