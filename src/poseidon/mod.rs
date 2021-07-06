@@ -23,20 +23,20 @@ mod grain_lfsr;
 #[derive(Clone, Debug)]
 pub struct PoseidonParameters<F: PrimeField> {
     /// number of rounds in a full-round operation
-    full_rounds: usize,
+    pub full_rounds: usize,
     /// number of rounds in a partial-round operation
-    partial_rounds: usize,
+    pub partial_rounds: usize,
     /// Exponent used in S-boxes
-    alpha: u64,
+    pub alpha: u64,
     /// Additive Round keys. These are added before each MDS matrix application to make it an affine shift.
     /// They are indexed by `ark[round_num][state_element_index]`
-    ark: Vec<Vec<F>>,
+    pub ark: Vec<Vec<F>>,
     /// Maximally Distance Separating Matrix.
-    mds: Vec<Vec<F>>,
+    pub mds: Vec<Vec<F>>,
     /// the rate (in terms of number of field elements)
-    rate: usize,
+    pub rate: usize,
     /// the capacity (in terms of number of field elements)
-    capacity: usize,
+    pub capacity: usize,
 }
 
 #[derive(Clone)]
