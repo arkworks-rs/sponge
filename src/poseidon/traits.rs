@@ -136,7 +136,7 @@ impl_poseidon_default_parameters_field!(Fp832, Fp832Parameters);
 mod test {
     use crate::poseidon::{PoseidonDefaultParameters, PoseidonDefaultParametersField};
     use ark_ff::{field_new, fields::Fp256};
-    use ark_ff::{BigInteger256, FftParameters, Fp256Parameters, FpParameters, PrimeField};
+    use ark_ff::{BigInteger256, FftParameters, Fp256Parameters, FpParameters};
     use ark_relations::r1cs::OptimizationGoal;
     use ark_test_curves::bls12_381::FrParameters;
 
