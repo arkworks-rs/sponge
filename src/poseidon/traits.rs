@@ -139,7 +139,6 @@ mod test {
     use ark_ff::{BigInteger256, FftParameters, Fp256Parameters, FpParameters, PrimeField};
     use ark_relations::r1cs::OptimizationGoal;
     use ark_test_curves::bls12_381::FrParameters;
-    use num_bigint::BigUint;
 
     pub struct TestFrParameters;
 
