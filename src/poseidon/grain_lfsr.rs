@@ -1,9 +1,10 @@
 #![allow(dead_code)]
 
 use ark_ff::{BigInteger, FpParameters, PrimeField};
+use ark_std::cmp::Ordering;
 
 pub struct PoseidonGrainLFSR {
-    pub prime_num_bits: usize,
+    pub prime_num_bits: u64,
 
     pub state: [bool; 80],
     pub head: usize,
@@ -13,10 +14,10 @@ pub struct PoseidonGrainLFSR {
 impl PoseidonGrainLFSR {
     pub fn new(
         is_sbox_an_inverse: bool,
-        prime_num_bits: usize,
-        state_len: usize,
-        num_full_rounds: usize,
-        num_partial_rounds: usize,
+        prime_num_bits: u64,
+        state_len: u64,
+        num_full_rounds: u64,
+        num_partial_rounds: u64,
     ) -> Self {
         let mut state = [false; 80];
 
@@ -71,20 +72,6 @@ impl PoseidonGrainLFSR {
             state[i] = true;
         }
 
-        println!(
-            "state: {:?}",
-            state
-                .iter()
-                .map(|x| {
-                    if *x {
-                        1
-                    } else {
-                        0
-                    }
-                })
-                .collect::<Vec<u64>>()
-        );
-
         let head = 0;
 
         let mut res = Self {
@@ -118,28 +105,56 @@ impl PoseidonGrainLFSR {
         res
     }
 
-    pub fn get_field_elements<F: PrimeField>(&mut self, num_elems: usize) -> Vec<F> {
-        assert_eq!(F::Params::MODULUS_BITS as usize, self.prime_num_bits);
+    pub fn get_field_elements_rejection_sampling<F: PrimeField>(
+        &mut self,
+        num_elems: usize,
+    ) -> Vec<F> {
+        assert_eq!(F::Params::MODULUS_BITS as u64, self.prime_num_bits);
 
         let mut res = Vec::new();
         for _ in 0..num_elems {
             // Perform rejection sampling
             loop {
                 // Obtain n bits and make it most-significant-bit first
-                let mut bits = self.get_bits(self.prime_num_bits);
+                let mut bits = self.get_bits(self.prime_num_bits as usize);
                 bits.reverse();
 
                 // Construct the number
                 let bigint = F::BigInt::from_bits_le(&bits);
 
-                // Check if bigint >= MODULUS, if so, reject and resample
-                let field_elem = F::from_repr(bigint);
-
-                if field_elem.is_some() {
-                    res.push(field_elem.unwrap());
+                if bigint.cmp(&F::Params::MODULUS) == Ordering::Less {
+                    res.push(F::from_repr(bigint).unwrap());
                     break;
                 }
             }
+        }
+
+        res
+    }
+
+    pub fn get_field_elements_mod_p<F: PrimeField>(&mut self, num_elems: usize) -> Vec<F> {
+        assert_eq!(F::Params::MODULUS_BITS as u64, self.prime_num_bits);
+
+        let mut res = Vec::new();
+        for _ in 0..num_elems {
+            // Obtain n bits and make it most-significant-bit first
+            let mut bits = self.get_bits(self.prime_num_bits as usize);
+            bits.reverse();
+
+            let bytes = bits
+                .chunks(8)
+                .map(|chunk| {
+                    let mut sum = chunk[0] as u8;
+                    let mut cur = 1;
+                    for i in chunk.iter().skip(1) {
+                        cur *= 2;
+                        sum += cur * (*i as u8);
+                    }
+                    sum
+                })
+                .collect::<Vec<u8>>();
+
+            res.push(F::from_le_bytes_mod_order(&bytes));
         }
 
         res
@@ -186,14 +201,14 @@ mod test {
         let mut lfsr = PoseidonGrainLFSR::new(false, 255, 3, 8, 31);
 
         assert_eq!(
-            lfsr.get_field_elements::<Fr>(1)[0],
+            lfsr.get_field_elements_rejection_sampling::<Fr>(1)[0],
             field_new!(
                 Fr,
                 "27117311055620256798560880810000042840428971800021819916023577129547249660720"
             )
         );
         assert_eq!(
-            lfsr.get_field_elements::<Fr>(1)[0],
+            lfsr.get_field_elements_rejection_sampling::<Fr>(1)[0],
             field_new!(
                 Fr,
                 "51641662388546346858987925410984003801092143452466182801674685248597955169158"

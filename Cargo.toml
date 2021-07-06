@@ -35,6 +35,7 @@ tracing = { version = "0.1", default-features = false, features = [ "attributes"
 
 [dev-dependencies]
 ark-test-curves = { version = "^0.3.0", features = ["bls12_381_curve", "mnt4_753_curve"]}
+num-bigint = "0.4.0"
 
 [features]
 default = [ "r1cs", "std" ]
