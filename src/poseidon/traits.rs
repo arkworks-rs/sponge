@@ -5,14 +5,23 @@ use ark_std::{vec, vec::Vec};
 
 /// An entry in the default Poseidon parameters
 pub struct PoseidonDefaultParametersEntry {
+    /// The rate (in terms of number of field elements).
     pub rate: usize,
+    /// Exponent used in S-boxes.
     pub alpha: usize,
+    /// Number of rounds in a full-round operation.
     pub full_rounds: usize,
+    /// Number of rounds in a partial-round operation.
     pub partial_rounds: usize,
+    /// Number of matrices to skip when generating parameters using the Grain LFSR.
+    ///
+    /// The matrices being skipped are those that do not satisfy all the desired properties.
+    /// See the [reference implementation](https://extgit.iaik.tugraz.at/krypto/hadeshash/-/blob/master/code/generate_parameters_grain.sage) for more detail.
     pub skip_matrices: usize,
 }
 
 impl PoseidonDefaultParametersEntry {
+    /// Create an entry in PoseidonDefaultParameters.
     pub const fn new(
         rate: usize,
         alpha: usize,
