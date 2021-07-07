@@ -35,9 +35,9 @@ pub struct PoseidonParameters<F: PrimeField> {
     pub mds: Vec<Vec<F>>,
     /// The rate (in terms of number of field elements).
     /// See [On the Indifferentiability of the Sponge Construction](https://iacr.org/archive/eurocrypt2008/49650180/49650180.pdf)
-    /// for more details on
+    /// for more details on the rate and capacity of a sponge.
     pub rate: usize,
-    /// The capacity (in terms of number of field elements).
+    /// The capacity (in terms of number of field elements)
     pub capacity: usize,
 }
 
@@ -368,7 +368,9 @@ impl<CF: PrimeField> SpongeExt for PoseidonSponge<CF> {
 
 #[cfg(test)]
 mod test {
-    use crate::poseidon::{PoseidonDefaultParameters, PoseidonDefaultParametersField, PoseidonDefaultParametersEntry};
+    use crate::poseidon::{
+        PoseidonDefaultParameters, PoseidonDefaultParametersEntry, PoseidonDefaultParametersField,
+    };
     use crate::{poseidon::PoseidonSponge, CryptographicSponge, FieldBasedCryptographicSponge};
     use ark_ff::{field_new, BigInteger256, FftParameters, Fp256, Fp256Parameters, FpParameters};
     use ark_test_curves::bls12_381::FrParameters;

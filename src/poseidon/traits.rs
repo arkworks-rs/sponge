@@ -5,7 +5,6 @@ use ark_std::{vec, vec::Vec};
 
 /// An entry in the default Poseidon parameters
 pub struct PoseidonDefaultParametersEntry {
-
     pub rate: usize,
     pub alpha: usize,
     pub full_rounds: usize,
@@ -14,13 +13,19 @@ pub struct PoseidonDefaultParametersEntry {
 }
 
 impl PoseidonDefaultParametersEntry {
-    pub const fn new(rate: usize, alpha: usize, full_rounds: usize, partial_rounds: usize, skip_matrices: usize) -> Self {
+    pub const fn new(
+        rate: usize,
+        alpha: usize,
+        full_rounds: usize,
+        partial_rounds: usize,
+        skip_matrices: usize,
+    ) -> Self {
         Self {
             rate,
             alpha,
             full_rounds,
             partial_rounds,
-            skip_matrices
+            skip_matrices,
         }
     }
 }
@@ -154,7 +159,9 @@ impl_poseidon_default_parameters_field!(Fp832, Fp832Parameters);
 
 #[cfg(test)]
 mod test {
-    use crate::poseidon::{PoseidonDefaultParameters, PoseidonDefaultParametersField, PoseidonDefaultParametersEntry};
+    use crate::poseidon::{
+        PoseidonDefaultParameters, PoseidonDefaultParametersEntry, PoseidonDefaultParametersField,
+    };
     use ark_ff::{field_new, fields::Fp256};
     use ark_ff::{BigInteger256, FftParameters, Fp256Parameters, FpParameters};
     use ark_test_curves::bls12_381::FrParameters;
