@@ -33,9 +33,11 @@ pub struct PoseidonParameters<F: PrimeField> {
     pub ark: Vec<Vec<F>>,
     /// Maximally Distance Separating (MDS) Matrix.
     pub mds: Vec<Vec<F>>,
-    /// the rate (in terms of number of field elements)
+    /// The rate (in terms of number of field elements).
+    /// See [On the Indifferentiability of the Sponge Construction](https://iacr.org/archive/eurocrypt2008/49650180/49650180.pdf)
+    /// for more details on
     pub rate: usize,
-    /// the capacity (in terms of number of field elements)
+    /// The capacity (in terms of number of field elements).
     pub capacity: usize,
 }
 
@@ -366,7 +368,7 @@ impl<CF: PrimeField> SpongeExt for PoseidonSponge<CF> {
 
 #[cfg(test)]
 mod test {
-    use crate::poseidon::{PoseidonDefaultParameters, PoseidonDefaultParametersField};
+    use crate::poseidon::{PoseidonDefaultParameters, PoseidonDefaultParametersField, PoseidonDefaultParametersEntry};
     use crate::{poseidon::PoseidonSponge, CryptographicSponge, FieldBasedCryptographicSponge};
     use ark_ff::{field_new, BigInteger256, FftParameters, Fp256, Fp256Parameters, FpParameters};
     use ark_test_curves::bls12_381::FrParameters;
@@ -397,23 +399,23 @@ mod test {
     }
 
     impl PoseidonDefaultParameters for TestFrParameters {
-        const PARAMS_OPT_FOR_CONSTRAINTS: [[usize; 5]; 7] = [
-            [2, 17, 8, 31, 0],
-            [3, 5, 8, 56, 0],
-            [4, 5, 8, 56, 0],
-            [5, 5, 8, 57, 0],
-            [6, 5, 8, 57, 0],
-            [7, 5, 8, 57, 0],
-            [8, 5, 8, 57, 0],
+        const PARAMS_OPT_FOR_CONSTRAINTS: [PoseidonDefaultParametersEntry; 7] = [
+            PoseidonDefaultParametersEntry::new(2, 17, 8, 31, 0),
+            PoseidonDefaultParametersEntry::new(3, 5, 8, 56, 0),
+            PoseidonDefaultParametersEntry::new(4, 5, 8, 56, 0),
+            PoseidonDefaultParametersEntry::new(5, 5, 8, 57, 0),
+            PoseidonDefaultParametersEntry::new(6, 5, 8, 57, 0),
+            PoseidonDefaultParametersEntry::new(7, 5, 8, 57, 0),
+            PoseidonDefaultParametersEntry::new(8, 5, 8, 57, 0),
         ];
-        const PARAMS_OPT_FOR_WEIGHTS: [[usize; 5]; 7] = [
-            [2, 257, 8, 13, 0],
-            [3, 257, 8, 13, 0],
-            [4, 257, 8, 13, 0],
-            [5, 257, 8, 13, 0],
-            [6, 257, 8, 13, 0],
-            [7, 257, 8, 13, 0],
-            [8, 257, 8, 13, 0],
+        const PARAMS_OPT_FOR_WEIGHTS: [PoseidonDefaultParametersEntry; 7] = [
+            PoseidonDefaultParametersEntry::new(2, 257, 8, 13, 0),
+            PoseidonDefaultParametersEntry::new(3, 257, 8, 13, 0),
+            PoseidonDefaultParametersEntry::new(4, 257, 8, 13, 0),
+            PoseidonDefaultParametersEntry::new(5, 257, 8, 13, 0),
+            PoseidonDefaultParametersEntry::new(6, 257, 8, 13, 0),
+            PoseidonDefaultParametersEntry::new(7, 257, 8, 13, 0),
+            PoseidonDefaultParametersEntry::new(8, 257, 8, 13, 0),
         ];
     }
 

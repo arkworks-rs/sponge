@@ -3,6 +3,28 @@ use crate::poseidon::PoseidonParameters;
 use ark_ff::{fields::models::*, FpParameters, PrimeField};
 use ark_std::{vec, vec::Vec};
 
+/// An entry in the default Poseidon parameters
+pub struct PoseidonDefaultParametersEntry {
+
+    pub rate: usize,
+    pub alpha: usize,
+    pub full_rounds: usize,
+    pub partial_rounds: usize,
+    pub skip_matrices: usize,
+}
+
+impl PoseidonDefaultParametersEntry {
+    pub const fn new(rate: usize, alpha: usize, full_rounds: usize, partial_rounds: usize, skip_matrices: usize) -> Self {
+        Self {
+            rate,
+            alpha,
+            full_rounds,
+            partial_rounds,
+            skip_matrices
+        }
+    }
+}
+
 /// A trait for default Poseidon parameters associated with a prime field
 pub trait PoseidonDefaultParameters: FpParameters {
     /// An array of the parameters optimized for constraints
@@ -11,12 +33,12 @@ pub trait PoseidonDefaultParameters: FpParameters {
     ///
     /// Here, `skip_matrices` denote how many matrices to skip before
     /// finding one that satisfy all the requirements.
-    const PARAMS_OPT_FOR_CONSTRAINTS: [[usize; 5]; 7];
+    const PARAMS_OPT_FOR_CONSTRAINTS: [PoseidonDefaultParametersEntry; 7];
 
     /// An array of the parameters optimized for weights
     /// (rate, alpha, full_rounds, partial_rounds, skip_matrices)
     /// for rate = 2, 3, 4, 5, 6, 7, 8
-    const PARAMS_OPT_FOR_WEIGHTS: [[usize; 5]; 7];
+    const PARAMS_OPT_FOR_WEIGHTS: [PoseidonDefaultParametersEntry; 7];
 }
 
 /// A field with Poseidon parameters associated
@@ -41,22 +63,22 @@ pub fn get_default_poseidon_parameters_internal<F: PrimeField, P: PoseidonDefaul
     };
 
     for param in params_set.iter() {
-        if param[0] == rate {
+        if param.rate == rate {
             let (ark, mds) = find_poseidon_ark_and_mds::<F>(
                 P::MODULUS_BITS as u64,
                 rate,
-                param[2] as u64,
-                param[3] as u64,
-                param[4] as u64,
+                param.full_rounds as u64,
+                param.partial_rounds as u64,
+                param.skip_matrices as u64,
             );
 
             return Some(PoseidonParameters {
-                full_rounds: param[2],
-                partial_rounds: param[3],
-                alpha: param[1] as u64,
+                full_rounds: param.full_rounds,
+                partial_rounds: param.partial_rounds,
+                alpha: param.alpha as u64,
                 ark,
                 mds,
-                rate: param[0],
+                rate: param.rate,
                 capacity: 1,
             });
         }
@@ -132,7 +154,7 @@ impl_poseidon_default_parameters_field!(Fp832, Fp832Parameters);
 
 #[cfg(test)]
 mod test {
-    use crate::poseidon::{PoseidonDefaultParameters, PoseidonDefaultParametersField};
+    use crate::poseidon::{PoseidonDefaultParameters, PoseidonDefaultParametersField, PoseidonDefaultParametersEntry};
     use ark_ff::{field_new, fields::Fp256};
     use ark_ff::{BigInteger256, FftParameters, Fp256Parameters, FpParameters};
     use ark_test_curves::bls12_381::FrParameters;
@@ -163,23 +185,23 @@ mod test {
     }
 
     impl PoseidonDefaultParameters for TestFrParameters {
-        const PARAMS_OPT_FOR_CONSTRAINTS: [[usize; 5]; 7] = [
-            [2, 17, 8, 31, 0],
-            [3, 5, 8, 56, 0],
-            [4, 5, 8, 56, 0],
-            [5, 5, 8, 57, 0],
-            [6, 5, 8, 57, 0],
-            [7, 5, 8, 57, 0],
-            [8, 5, 8, 57, 0],
+        const PARAMS_OPT_FOR_CONSTRAINTS: [PoseidonDefaultParametersEntry; 7] = [
+            PoseidonDefaultParametersEntry::new(2, 17, 8, 31, 0),
+            PoseidonDefaultParametersEntry::new(3, 5, 8, 56, 0),
+            PoseidonDefaultParametersEntry::new(4, 5, 8, 56, 0),
+            PoseidonDefaultParametersEntry::new(5, 5, 8, 57, 0),
+            PoseidonDefaultParametersEntry::new(6, 5, 8, 57, 0),
+            PoseidonDefaultParametersEntry::new(7, 5, 8, 57, 0),
+            PoseidonDefaultParametersEntry::new(8, 5, 8, 57, 0),
         ];
-        const PARAMS_OPT_FOR_WEIGHTS: [[usize; 5]; 7] = [
-            [2, 257, 8, 13, 0],
-            [3, 257, 8, 13, 0],
-            [4, 257, 8, 13, 0],
-            [5, 257, 8, 13, 0],
-            [6, 257, 8, 13, 0],
-            [7, 257, 8, 13, 0],
-            [8, 257, 8, 13, 0],
+        const PARAMS_OPT_FOR_WEIGHTS: [PoseidonDefaultParametersEntry; 7] = [
+            PoseidonDefaultParametersEntry::new(2, 257, 8, 13, 0),
+            PoseidonDefaultParametersEntry::new(3, 257, 8, 13, 0),
+            PoseidonDefaultParametersEntry::new(4, 257, 8, 13, 0),
+            PoseidonDefaultParametersEntry::new(5, 257, 8, 13, 0),
+            PoseidonDefaultParametersEntry::new(6, 257, 8, 13, 0),
+            PoseidonDefaultParametersEntry::new(7, 257, 8, 13, 0),
+            PoseidonDefaultParametersEntry::new(8, 257, 8, 13, 0),
         ];
     }
 
