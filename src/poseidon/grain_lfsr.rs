@@ -145,13 +145,11 @@ impl PoseidonGrainLFSR {
             let bytes = bits
                 .chunks(8)
                 .map(|chunk| {
-                    let mut sum = chunk[0] as u8;
-                    let mut cur = 1;
-                    for i in chunk.iter().skip(1) {
-                        cur *= 2;
-                        sum += cur * (*i as u8);
+                    let mut result = 0u8;
+                    for (i, bit) in chunk.iter().enumerate() {
+                    	result |= u8::from(bit) << i
                     }
-                    sum
+                    result
                 })
                 .collect::<Vec<u8>>();
 
