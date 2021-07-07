@@ -43,10 +43,9 @@ impl<F: PrimeField> PoseidonSpongeVar<F> {
                 *state_item = state_item.pow_by_constant(&[self.parameters.alpha])?;
             }
         }
-        // Partial rounds apply the S Box (x^alpha) to just the final element of state
+        // Partial rounds apply the S Box (x^alpha) to just the first element of state
         else {
-            state[state.len() - 1] =
-                state[state.len() - 1].pow_by_constant(&[self.parameters.alpha])?;
+            state[0] = state[0].pow_by_constant(&[self.parameters.alpha])?;
         }
 
         Ok(())
@@ -114,7 +113,7 @@ impl<F: PrimeField> PoseidonSpongeVar<F> {
             // if we can finish in this call
             if rate_start_index + remaining_elements.len() <= self.parameters.rate {
                 for (i, element) in remaining_elements.iter().enumerate() {
-                    self.state[i + rate_start_index] += element;
+                    self.state[self.parameters.capacity + i + rate_start_index] += element;
                 }
                 self.mode = DuplexSpongeMode::Absorbing {
                     next_absorb_index: rate_start_index + remaining_elements.len(),
@@ -129,7 +128,7 @@ impl<F: PrimeField> PoseidonSpongeVar<F> {
                 .enumerate()
                 .take(num_elements_absorbed)
             {
-                self.state[i + rate_start_index] += element;
+                self.state[self.parameters.capacity + i + rate_start_index] += element;
             }
             self.permute()?;
             // the input elements got truncated by num elements absorbed
@@ -150,7 +149,8 @@ impl<F: PrimeField> PoseidonSpongeVar<F> {
             // if we can finish in this call
             if rate_start_index + remaining_output.len() <= self.parameters.rate {
                 remaining_output.clone_from_slice(
-                    &self.state[rate_start_index..(remaining_output.len() + rate_start_index)],
+                    &self.state[self.parameters.capacity + rate_start_index
+                        ..(self.parameters.capacity + remaining_output.len() + rate_start_index)],
                 );
                 self.mode = DuplexSpongeMode::Squeezing {
                     next_squeeze_index: rate_start_index + remaining_output.len(),
@@ -160,7 +160,8 @@ impl<F: PrimeField> PoseidonSpongeVar<F> {
             // otherwise squeeze (rate - rate_start_index) elements
             let num_elements_squeezed = self.parameters.rate - rate_start_index;
             remaining_output[..num_elements_squeezed].clone_from_slice(
-                &self.state[rate_start_index..(num_elements_squeezed + rate_start_index)],
+                &self.state[self.parameters.capacity + rate_start_index
+                    ..(self.parameters.capacity + num_elements_squeezed + rate_start_index)],
             );
 
             // Unless we are done with squeezing in this call, permute.

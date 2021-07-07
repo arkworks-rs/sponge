@@ -1,7 +1,6 @@
 #![allow(dead_code)]
 
 use ark_ff::{BigInteger, FpParameters, PrimeField};
-use ark_std::cmp::Ordering;
 use ark_std::vec::Vec;
 
 pub struct PoseidonGrainLFSR {
@@ -147,7 +146,7 @@ impl PoseidonGrainLFSR {
                 .map(|chunk| {
                     let mut result = 0u8;
                     for (i, bit) in chunk.iter().enumerate() {
-                    	result |= u8::from(bit) << i
+                        result |= u8::from(*bit) << i
                     }
                     result
                 })

@@ -154,7 +154,8 @@ impl<F: PrimeField> PoseidonSponge<F> {
             // if we can finish in this call
             if rate_start_index + output_remaining.len() <= self.parameters.rate {
                 output_remaining.clone_from_slice(
-                    &self.state[self.parameters.capacity + rate_start_index..(self.parameters.capacity + output_remaining.len() + rate_start_index)],
+                    &self.state[self.parameters.capacity + rate_start_index
+                        ..(self.parameters.capacity + output_remaining.len() + rate_start_index)],
                 );
                 self.mode = DuplexSpongeMode::Squeezing {
                     next_squeeze_index: rate_start_index + output_remaining.len(),
@@ -164,7 +165,8 @@ impl<F: PrimeField> PoseidonSponge<F> {
             // otherwise squeeze (rate - rate_start_index) elements
             let num_elements_squeezed = self.parameters.rate - rate_start_index;
             output_remaining[..num_elements_squeezed].clone_from_slice(
-                &self.state[self.parameters.capacity + rate_start_index..(self.parameters.capacity + num_elements_squeezed + rate_start_index)],
+                &self.state[self.parameters.capacity + rate_start_index
+                    ..(self.parameters.capacity + num_elements_squeezed + rate_start_index)],
             );
 
             // Unless we are done with squeezing in this call, permute.
@@ -364,27 +366,90 @@ impl<CF: PrimeField> SpongeExt for PoseidonSponge<CF> {
 
 #[cfg(test)]
 mod test {
-    use crate::{poseidon::PoseidonSponge, CryptographicSponge, PoseidonDefaultParametersField};
-    use ark_test_curves::bls12_381::Fr;
+    use crate::poseidon::{PoseidonDefaultParameters, PoseidonDefaultParametersField};
+    use crate::{poseidon::PoseidonSponge, CryptographicSponge, FieldBasedCryptographicSponge};
+    use ark_ff::{field_new, BigInteger256, FftParameters, Fp256, Fp256Parameters, FpParameters};
+    use ark_test_curves::bls12_381::FrParameters;
+
+    pub struct TestFrParameters;
+
+    impl Fp256Parameters for TestFrParameters {}
+    impl FftParameters for TestFrParameters {
+        type BigInt = <FrParameters as FftParameters>::BigInt;
+        const TWO_ADICITY: u32 = FrParameters::TWO_ADICITY;
+        const TWO_ADIC_ROOT_OF_UNITY: Self::BigInt = FrParameters::TWO_ADIC_ROOT_OF_UNITY;
+    }
+
+    // This TestFrParameters is the same as the BLS12-381's Fr.
+    // MODULUS = 52435875175126190479447740508185965837690552500527637822603658699938581184513
+    impl FpParameters for TestFrParameters {
+        const MODULUS: BigInteger256 = FrParameters::MODULUS;
+        const MODULUS_BITS: u32 = FrParameters::MODULUS_BITS;
+        const CAPACITY: u32 = FrParameters::CAPACITY;
+        const REPR_SHAVE_BITS: u32 = FrParameters::REPR_SHAVE_BITS;
+        const R: BigInteger256 = FrParameters::R;
+        const R2: BigInteger256 = FrParameters::R2;
+        const INV: u64 = FrParameters::INV;
+        const GENERATOR: BigInteger256 = FrParameters::GENERATOR;
+        const MODULUS_MINUS_ONE_DIV_TWO: BigInteger256 = FrParameters::MODULUS_MINUS_ONE_DIV_TWO;
+        const T: BigInteger256 = FrParameters::T;
+        const T_MINUS_ONE_DIV_TWO: BigInteger256 = FrParameters::T_MINUS_ONE_DIV_TWO;
+    }
+
+    impl PoseidonDefaultParameters for TestFrParameters {
+        const PARAMS_OPT_FOR_CONSTRAINTS: [[usize; 5]; 7] = [
+            [2, 17, 8, 31, 0],
+            [3, 5, 8, 56, 0],
+            [4, 5, 8, 56, 0],
+            [5, 5, 8, 57, 0],
+            [6, 5, 8, 57, 0],
+            [7, 5, 8, 57, 0],
+            [8, 5, 8, 57, 0],
+        ];
+        const PARAMS_OPT_FOR_WEIGHTS: [[usize; 5]; 7] = [
+            [2, 257, 8, 13, 0],
+            [3, 257, 8, 13, 0],
+            [4, 257, 8, 13, 0],
+            [5, 257, 8, 13, 0],
+            [6, 257, 8, 13, 0],
+            [7, 257, 8, 13, 0],
+            [8, 257, 8, 13, 0],
+        ];
+    }
+
+    pub type TestFr = Fp256<TestFrParameters>;
 
     #[test]
     fn test_poseidon_sponge_consistency() {
-        let sponge_param = Fr::get_default_parameters(2, false).unwrap();
+        let sponge_param = TestFr::get_default_poseidon_parameters(2, false).unwrap();
 
-        let mut sponge = PoseidonSponge::<Fr>::new(&sponge_param);
-        sponge.absorb(&vec![Fr::from(0u8), Fr::from(1u8), Fr::from(2u8)]);
-        let res = sponge.squeeze_field_elements(3);
+        let mut sponge = PoseidonSponge::<TestFr>::new(&sponge_param);
+        sponge.absorb(&vec![
+            TestFr::from(0u8),
+            TestFr::from(1u8),
+            TestFr::from(2u8),
+        ]);
+        let res = sponge.squeeze_native_field_elements(3);
         assert_eq!(
             res[0],
-            Fr::from_str("183803686790727238772081675071619852436369913800063772017078999980142670759").unwrap()
+            field_new!(
+                TestFr,
+                "40442793463571304028337753002242186710310163897048962278675457993207843616876"
+            )
         );
         assert_eq!(
             res[1],
-            Fr::from_str("4548112345443734132894035556889689684115621521009206145281409895966219453604").unwrap()
+            field_new!(
+                TestFr,
+                "2664374461699898000291153145224099287711224021716202960480903840045233645301"
+            )
         );
         assert_eq!(
             res[2],
-            Fr::from_str("3896484493085020103611477367225908772657110714417081386200143313456038982706").unwrap()
+            field_new!(
+                TestFr,
+                "50191078828066923662070228256530692951801504043422844038937334196346054068797"
+            )
         );
     }
 }

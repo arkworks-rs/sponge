@@ -23,7 +23,10 @@ pub trait PoseidonDefaultParameters: FpParameters {
 pub trait PoseidonDefaultParametersField: PrimeField {
     /// Obtain the default Poseidon parameters for this rate and for this prime field,
     /// with a specific optimization goal.
-    fn get_default_poseidon_parameters(rate: usize, optimized_for_weights: bool) -> Option<PoseidonParameters<Self>>;
+    fn get_default_poseidon_parameters(
+        rate: usize,
+        optimized_for_weights: bool,
+    ) -> Option<PoseidonParameters<Self>>;
 }
 
 /// Internal function that uses the `PoseidonDefaultParameters` to compute the Poseidon parameters.
@@ -70,7 +73,13 @@ pub fn find_poseidon_ark_and_mds<F: PrimeField>(
     partial_rounds: u64,
     skip_matrices: u64,
 ) -> (Vec<Vec<F>>, Vec<Vec<F>>) {
-    let mut lfsr = PoseidonGrainLFSR::new(false, prime_bits, (rate + 1) as u64, full_rounds, partial_rounds);
+    let mut lfsr = PoseidonGrainLFSR::new(
+        false,
+        prime_bits,
+        (rate + 1) as u64,
+        full_rounds,
+        partial_rounds,
+    );
 
     let mut ark = Vec::<Vec<F>>::new();
     for _ in 0..(full_rounds + partial_rounds) {
@@ -103,7 +112,10 @@ pub fn find_poseidon_ark_and_mds<F: PrimeField>(
 macro_rules! impl_poseidon_default_parameters_field {
     ($field: ident, $params: ident) => {
         impl<P: $params + PoseidonDefaultParameters> PoseidonDefaultParametersField for $field<P> {
-            fn get_default_parameters(rate: usize, optimized_for_weights: bool) -> Option<PoseidonParameters<Self>> {
+            fn get_default_poseidon_parameters(
+                rate: usize,
+                optimized_for_weights: bool,
+            ) -> Option<PoseidonParameters<Self>> {
                 get_default_poseidon_parameters_internal::<Self, P>(rate, optimized_for_weights)
             }
         }
@@ -176,7 +188,7 @@ mod test {
     #[test]
     fn bls12_381_fr_poseidon_default_parameters_test() {
         // constraints
-        let constraints_rate_2 = TestFr::get_default_parameters(2, false).unwrap();
+        let constraints_rate_2 = TestFr::get_default_poseidon_parameters(2, false).unwrap();
         assert_eq!(
             constraints_rate_2.ark[0][0],
             field_new!(
@@ -192,7 +204,7 @@ mod test {
             )
         );
 
-        let constraints_rate_3 = TestFr::get_default_parameters(3, false).unwrap();
+        let constraints_rate_3 = TestFr::get_default_poseidon_parameters(3, false).unwrap();
         assert_eq!(
             constraints_rate_3.ark[0][0],
             field_new!(
@@ -208,7 +220,7 @@ mod test {
             )
         );
 
-        let constraints_rate_4 = TestFr::get_default_parameters(4, false).unwrap();
+        let constraints_rate_4 = TestFr::get_default_poseidon_parameters(4, false).unwrap();
         assert_eq!(
             constraints_rate_4.ark[0][0],
             field_new!(
@@ -224,7 +236,7 @@ mod test {
             )
         );
 
-        let constraints_rate_5 = TestFr::get_default_parameters(5, false).unwrap();
+        let constraints_rate_5 = TestFr::get_default_poseidon_parameters(5, false).unwrap();
         assert_eq!(
             constraints_rate_5.ark[0][0],
             field_new!(
@@ -240,7 +252,7 @@ mod test {
             )
         );
 
-        let constraints_rate_6 = TestFr::get_default_parameters(6, false).unwrap();
+        let constraints_rate_6 = TestFr::get_default_poseidon_parameters(6, false).unwrap();
         assert_eq!(
             constraints_rate_6.ark[0][0],
             field_new!(
@@ -256,7 +268,7 @@ mod test {
             )
         );
 
-        let constraints_rate_7 = TestFr::get_default_parameters(7, false).unwrap();
+        let constraints_rate_7 = TestFr::get_default_poseidon_parameters(7, false).unwrap();
         assert_eq!(
             constraints_rate_7.ark[0][0],
             field_new!(
@@ -272,7 +284,7 @@ mod test {
             )
         );
 
-        let constraints_rate_8 = TestFr::get_default_parameters(8, false).unwrap();
+        let constraints_rate_8 = TestFr::get_default_poseidon_parameters(8, false).unwrap();
         assert_eq!(
             constraints_rate_8.ark[0][0],
             field_new!(
@@ -289,7 +301,7 @@ mod test {
         );
 
         // weights
-        let weights_rate_2 = TestFr::get_default_parameters(2, true).unwrap();
+        let weights_rate_2 = TestFr::get_default_poseidon_parameters(2, true).unwrap();
         assert_eq!(
             weights_rate_2.ark[0][0],
             field_new!(
@@ -305,7 +317,7 @@ mod test {
             )
         );
 
-        let weights_rate_3 = TestFr::get_default_parameters(3, true).unwrap();
+        let weights_rate_3 = TestFr::get_default_poseidon_parameters(3, true).unwrap();
         assert_eq!(
             weights_rate_3.ark[0][0],
             field_new!(
@@ -321,7 +333,7 @@ mod test {
             )
         );
 
-        let weights_rate_4 = TestFr::get_default_parameters(4, true).unwrap();
+        let weights_rate_4 = TestFr::get_default_poseidon_parameters(4, true).unwrap();
         assert_eq!(
             weights_rate_4.ark[0][0],
             field_new!(
@@ -337,7 +349,7 @@ mod test {
             )
         );
 
-        let weights_rate_5 = TestFr::get_default_parameters(5, true).unwrap();
+        let weights_rate_5 = TestFr::get_default_poseidon_parameters(5, true).unwrap();
         assert_eq!(
             weights_rate_5.ark[0][0],
             field_new!(
@@ -353,7 +365,7 @@ mod test {
             )
         );
 
-        let weights_rate_6 = TestFr::get_default_parameters(6, true).unwrap();
+        let weights_rate_6 = TestFr::get_default_poseidon_parameters(6, true).unwrap();
         assert_eq!(
             weights_rate_6.ark[0][0],
             field_new!(
@@ -369,7 +381,7 @@ mod test {
             )
         );
 
-        let weights_rate_7 = TestFr::get_default_parameters(7, true).unwrap();
+        let weights_rate_7 = TestFr::get_default_poseidon_parameters(7, true).unwrap();
         assert_eq!(
             weights_rate_7.ark[0][0],
             field_new!(
@@ -385,7 +397,7 @@ mod test {
             )
         );
 
-        let weights_rate_8 = TestFr::get_default_parameters(8, true).unwrap();
+        let weights_rate_8 = TestFr::get_default_poseidon_parameters(8, true).unwrap();
         assert_eq!(
             weights_rate_8.ark[0][0],
             field_new!(
