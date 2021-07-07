@@ -123,8 +123,8 @@ impl PoseidonGrainLFSR {
                 // Construct the number
                 let bigint = F::BigInt::from_bits_le(&bits);
 
-                if bigint.cmp(&F::Params::MODULUS) == Ordering::Less {
-                    res.push(F::from_repr(bigint).unwrap());
+                if let Some(f) = F::from_repr(bigint) {
+                    res.push(f);
                     break;
                 }
             }
@@ -145,13 +145,11 @@ impl PoseidonGrainLFSR {
             let bytes = bits
                 .chunks(8)
                 .map(|chunk| {
-                    let mut sum = chunk[0] as u8;
-                    let mut cur = 1;
-                    for i in chunk.iter().skip(1) {
-                        cur *= 2;
-                        sum += cur * (*i as u8);
+                    let mut result = 0u8;
+                    for (i, bit) in chunk.iter().enumerate() {
+                    	result |= u8::from(bit) << i
                     }
-                    sum
+                    result
                 })
                 .collect::<Vec<u8>>();
 
