@@ -22,9 +22,9 @@ mod grain_lfsr;
 /// Parameters and RNG used
 #[derive(Clone, Debug)]
 pub struct PoseidonParameters<F: PrimeField> {
-    /// number of rounds in a full-round operation
+    /// Number of rounds in a full-round operation
     pub full_rounds: usize,
-    /// number of rounds in a partial-round operation
+    /// Number of rounds in a partial-round operation
     pub partial_rounds: usize,
     /// Exponent used in S-boxes
     pub alpha: u64,
