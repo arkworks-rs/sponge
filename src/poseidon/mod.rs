@@ -33,9 +33,9 @@ pub struct PoseidonParameters<F: PrimeField> {
     pub ark: Vec<Vec<F>>,
     /// Maximally Distance Separating (MDS) Matrix.
     pub mds: Vec<Vec<F>>,
-    /// the rate (in terms of number of field elements)
+    /// The rate (in terms of number of field elements)
     pub rate: usize,
-    /// the capacity (in terms of number of field elements)
+    /// The capacity (in terms of number of field elements)
     pub capacity: usize,
 }
 
