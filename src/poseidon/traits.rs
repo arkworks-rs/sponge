@@ -23,100 +23,88 @@ pub trait PoseidonDefaultParameters: FpParameters {
 pub trait PoseidonDefaultParametersField: PrimeField {
     /// Obtain the default Poseidon parameters for this rate and for this prime field,
     /// with a specific optimization goal.
-    fn get_default_parameters(
-        rate: usize,
-        optimized_for_constraints: bool,
-    ) -> Option<PoseidonParameters<Self>>;
+    fn get_default_poseidon_parameters(rate: usize, optimized_for_weights: bool) -> Option<PoseidonParameters<Self>>;
+}
 
-    /// Internal function that uses the `PoseidonDefaultParameters` to compute the Poseidon parameters.
-    fn get_default_parameters_internal<P: PoseidonDefaultParameters>(
-        rate: usize,
-        optimized_for_constraints: bool,
-    ) -> Option<PoseidonParameters<Self>> {
-        let params_set = if !optimized_for_constraints {
-            P::PARAMS_OPT_FOR_CONSTRAINTS
-        } else {
-            P::PARAMS_OPT_FOR_WEIGHTS
-        };
+/// Internal function that uses the `PoseidonDefaultParameters` to compute the Poseidon parameters.
+pub fn get_default_poseidon_parameters_internal<F: PrimeField, P: PoseidonDefaultParameters>(
+    rate: usize,
+    optimized_for_weights: bool,
+) -> Option<PoseidonParameters<F>> {
+    let params_set = if !optimized_for_weights {
+        P::PARAMS_OPT_FOR_CONSTRAINTS
+    } else {
+        P::PARAMS_OPT_FOR_WEIGHTS
+    };
 
-        for param in params_set.iter() {
-            if param[0] == rate {
-                let (ark, mds) = Self::find_ark_and_mds(
-                    P::MODULUS_BITS as u64,
-                    rate,
-                    param[2] as u64,
-                    param[3] as u64,
-                    param[4] as u64,
-                );
+    for param in params_set.iter() {
+        if param[0] == rate {
+            let (ark, mds) = find_poseidon_ark_and_mds::<F>(
+                P::MODULUS_BITS as u64,
+                rate,
+                param[2] as u64,
+                param[3] as u64,
+                param[4] as u64,
+            );
 
-                return Some(PoseidonParameters {
-                    full_rounds: param[2],
-                    partial_rounds: param[3],
-                    alpha: param[1] as u64,
-                    ark: ark,
-                    mds: mds,
-                    rate: param[0],
-                    capacity: 1,
-                });
-            }
+            return Some(PoseidonParameters {
+                full_rounds: param[2],
+                partial_rounds: param[3],
+                alpha: param[1] as u64,
+                ark,
+                mds,
+                rate: param[0],
+                capacity: 1,
+            });
         }
-
-        None
     }
 
-    /// Internal function that computes the ark and mds from the Poseidon Grain LFSR.
-    fn find_ark_and_mds(
-        prime_bits: u64,
-        rate: usize,
-        full_rounds: u64,
-        partial_rounds: u64,
-        skip_matrices: u64,
-    ) -> (Vec<Vec<Self>>, Vec<Vec<Self>>) {
-        let mut lfsr = PoseidonGrainLFSR::new(
-            false,
-            prime_bits,
-            (rate + 1) as u64,
-            full_rounds,
-            partial_rounds,
-        );
+    None
+}
 
-        let mut ark = Vec::<Vec<Self>>::new();
-        for _ in 0..(full_rounds + partial_rounds) {
-            ark.push(lfsr.get_field_elements_rejection_sampling(rate + 1));
-        }
+/// Internal function that computes the ark and mds from the Poseidon Grain LFSR.
+pub fn find_poseidon_ark_and_mds<F: PrimeField>(
+    prime_bits: u64,
+    rate: usize,
+    full_rounds: u64,
+    partial_rounds: u64,
+    skip_matrices: u64,
+) -> (Vec<Vec<F>>, Vec<Vec<F>>) {
+    let mut lfsr = PoseidonGrainLFSR::new(false, prime_bits, (rate + 1) as u64, full_rounds, partial_rounds);
 
-        let mut mds = Vec::<Vec<Self>>::new();
-        mds.resize(rate + 1, vec![Self::zero(); rate + 1]);
-        for _ in 0..skip_matrices {
-            let _ = lfsr.get_field_elements_mod_p::<Self>(2 * (rate + 1));
-        }
-
-        // a qualifying matrix must satisfy the following requirements
-        // - there is no duplication among the elements in x or y
-        // - there is no i and j such that x[i] + y[j] = p
-        // - the resultant MDS passes all the three tests
-
-        let xs = lfsr.get_field_elements_mod_p::<Self>(rate + 1);
-        let ys = lfsr.get_field_elements_mod_p::<Self>(rate + 1);
-
-        for i in 0..(rate + 1) {
-            for j in 0..(rate + 1) {
-                mds[i][j] = (xs[i] + &ys[j]).inverse().unwrap();
-            }
-        }
-
-        (ark, mds)
+    let mut ark = Vec::<Vec<F>>::new();
+    for _ in 0..(full_rounds + partial_rounds) {
+        ark.push(lfsr.get_field_elements_rejection_sampling(rate + 1));
     }
+
+    let mut mds = Vec::<Vec<F>>::new();
+    mds.resize(rate + 1, vec![F::zero(); rate + 1]);
+    for _ in 0..skip_matrices {
+        let _ = lfsr.get_field_elements_mod_p::<F>(2 * (rate + 1));
+    }
+
+    // a qualifying matrix must satisfy the following requirements
+    // - there is no duplication among the elements in x or y
+    // - there is no i and j such that x[i] + y[j] = p
+    // - the resultant MDS passes all the three tests
+
+    let xs = lfsr.get_field_elements_mod_p::<F>(rate + 1);
+    let ys = lfsr.get_field_elements_mod_p::<F>(rate + 1);
+
+    for i in 0..(rate + 1) {
+        for j in 0..(rate + 1) {
+            mds[i][j] = (xs[i] + &ys[j]).inverse().unwrap();
+        }
+    }
+
+    (ark, mds)
 }
 
 macro_rules! impl_poseidon_default_parameters_field {
     ($field: ident, $params: ident) => {
         impl<P: $params + PoseidonDefaultParameters> PoseidonDefaultParametersField for $field<P> {
-            fn get_default_parameters(
-                rate: usize,
-                optimized_for_constraints: bool,
-            ) -> Option<PoseidonParameters<Self>> {
-                Self::get_default_parameters_internal::<P>(rate, optimized_for_constraints)
+            fn get_default_parameters(rate: usize, optimized_for_weights: bool) -> Option<PoseidonParameters<Self>> {
+                get_default_poseidon_parameters_internal::<Self, P>(rate, optimized_for_weights)
             }
         }
     };

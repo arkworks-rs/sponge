@@ -65,9 +65,9 @@ impl<F: PrimeField> PoseidonSponge<F> {
                 *elem = elem.pow(&[self.parameters.alpha]);
             }
         }
-        // Partial rounds apply the S Box (x^alpha) to just the final element of state
+        // Partial rounds apply the S Box (x^alpha) to just the first element of state
         else {
-            state[state.len() - 1] = state[state.len() - 1].pow(&[self.parameters.alpha]);
+            state[0] = state[0].pow(&[self.parameters.alpha]);
         }
     }
 
@@ -123,7 +123,7 @@ impl<F: PrimeField> PoseidonSponge<F> {
             // if we can finish in this call
             if rate_start_index + remaining_elements.len() <= self.parameters.rate {
                 for (i, element) in remaining_elements.iter().enumerate() {
-                    self.state[i + rate_start_index] += element;
+                    self.state[self.parameters.capacity + i + rate_start_index] += element;
                 }
                 self.mode = DuplexSpongeMode::Absorbing {
                     next_absorb_index: rate_start_index + remaining_elements.len(),
@@ -138,7 +138,7 @@ impl<F: PrimeField> PoseidonSponge<F> {
                 .enumerate()
                 .take(num_elements_absorbed)
             {
-                self.state[i + rate_start_index] += element;
+                self.state[self.parameters.capacity + i + rate_start_index] += element;
             }
             self.permute();
             // the input elements got truncated by num elements absorbed
@@ -154,7 +154,7 @@ impl<F: PrimeField> PoseidonSponge<F> {
             // if we can finish in this call
             if rate_start_index + output_remaining.len() <= self.parameters.rate {
                 output_remaining.clone_from_slice(
-                    &self.state[rate_start_index..(output_remaining.len() + rate_start_index)],
+                    &self.state[self.parameters.capacity + rate_start_index..(self.parameters.capacity + output_remaining.len() + rate_start_index)],
                 );
                 self.mode = DuplexSpongeMode::Squeezing {
                     next_squeeze_index: rate_start_index + output_remaining.len(),
@@ -164,7 +164,7 @@ impl<F: PrimeField> PoseidonSponge<F> {
             // otherwise squeeze (rate - rate_start_index) elements
             let num_elements_squeezed = self.parameters.rate - rate_start_index;
             output_remaining[..num_elements_squeezed].clone_from_slice(
-                &self.state[rate_start_index..(num_elements_squeezed + rate_start_index)],
+                &self.state[self.parameters.capacity + rate_start_index..(self.parameters.capacity + num_elements_squeezed + rate_start_index)],
             );
 
             // Unless we are done with squeezing in this call, permute.
@@ -359,5 +359,32 @@ impl<CF: PrimeField> SpongeExt for PoseidonSponge<CF> {
             state: self.state,
             mode: self.mode,
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::{poseidon::PoseidonSponge, CryptographicSponge, PoseidonDefaultParametersField};
+    use ark_test_curves::bls12_381::Fr;
+
+    #[test]
+    fn test_poseidon_sponge_consistency() {
+        let sponge_param = Fr::get_default_parameters(2, false).unwrap();
+
+        let mut sponge = PoseidonSponge::<Fr>::new(&sponge_param);
+        sponge.absorb(&vec![Fr::from(0u8), Fr::from(1u8), Fr::from(2u8)]);
+        let res = sponge.squeeze_field_elements(3);
+        assert_eq!(
+            res[0],
+            Fr::from_str("183803686790727238772081675071619852436369913800063772017078999980142670759").unwrap()
+        );
+        assert_eq!(
+            res[1],
+            Fr::from_str("4548112345443734132894035556889689684115621521009206145281409895966219453604").unwrap()
+        );
+        assert_eq!(
+            res[2],
+            Fr::from_str("3896484493085020103611477367225908772657110714417081386200143313456038982706").unwrap()
+        );
     }
 }
