@@ -123,8 +123,8 @@ impl PoseidonGrainLFSR {
                 // Construct the number
                 let bigint = F::BigInt::from_bits_le(&bits);
 
-                if bigint.cmp(&F::Params::MODULUS) == Ordering::Less {
-                    res.push(F::from_repr(bigint).unwrap());
+                if let Some(f) = F::from_repr(bigint) {
+                    res.push(f);
                     break;
                 }
             }
