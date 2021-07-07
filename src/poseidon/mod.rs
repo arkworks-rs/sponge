@@ -31,7 +31,7 @@ pub struct PoseidonParameters<F: PrimeField> {
     /// Additive Round keys. These are added before each MDS matrix application to make it an affine shift.
     /// They are indexed by `ark[round_num][state_element_index]`
     pub ark: Vec<Vec<F>>,
-    /// Maximally Distance Separating Matrix.
+    /// Maximally Distance Separating (MDS) Matrix.
     pub mds: Vec<Vec<F>>,
     /// the rate (in terms of number of field elements)
     pub rate: usize,
