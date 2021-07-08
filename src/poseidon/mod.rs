@@ -49,13 +49,13 @@ pub struct PoseidonParameters<F: PrimeField> {
 ///
 /// [cos]: https://eprint.iacr.org/2019/1076
 pub struct PoseidonSponge<F: PrimeField> {
-    // Sponge Parameters
+    /// Sponge Parameters
     pub parameters: PoseidonParameters<F>,
 
     // Sponge State
-    /// current sponge's state (current elements in the permutation block)
+    /// Current sponge's state (current elements in the permutation block)
     pub state: Vec<F>,
-    /// current mode (whether its absorbing or squeezing)
+    /// Current mode (whether its absorbing or squeezing)
     pub mode: DuplexSpongeMode,
 }
 

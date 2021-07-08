@@ -17,16 +17,16 @@ use ark_std::vec::Vec;
 ///
 /// [cos]: https://eprint.iacr.org/2019/1076
 pub struct PoseidonSpongeVar<F: PrimeField> {
-    /// constraint system
+    /// Constraint system
     pub cs: ConstraintSystemRef<F>,
 
     /// Sponge Parameters
     pub parameters: PoseidonParameters<F>,
 
     // Sponge State
-    /// the sponge's state
+    /// The sponge's state
     pub state: Vec<FpVar<F>>,
-    /// the mode
+    /// The mode
     pub mode: DuplexSpongeMode,
 }
 
