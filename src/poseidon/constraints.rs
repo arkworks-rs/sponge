@@ -27,7 +27,7 @@ pub struct PoseidonSpongeVar<F: PrimeField> {
     /// the sponge's state
     pub state: Vec<FpVar<F>>,
     /// the mode
-    mode: DuplexSpongeMode,
+    pub mode: DuplexSpongeMode,
 }
 
 impl<F: PrimeField> PoseidonSpongeVar<F> {
