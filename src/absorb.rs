@@ -377,6 +377,7 @@ mod tests {
     use crate::{batch_field_cast, field_cast};
     use ark_ff::UniformRand;
     use ark_std::test_rng;
+    use ark_std::vec::Vec;
     use ark_test_curves::bls12_381::Fr;
 
     #[test]

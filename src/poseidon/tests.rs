@@ -805,11 +805,15 @@ pub(crate) fn poseidon_parameters_for_test<F: PrimeField>() -> PoseidonParameter
     let full_rounds = 8;
     let total_rounds = 37;
     let partial_rounds = total_rounds - full_rounds;
+    let capacity = 1;
+    let rate = 2;
     PoseidonParameters {
         full_rounds,
         partial_rounds,
         alpha,
         ark,
         mds,
+        rate,
+        capacity,
     }
 }
