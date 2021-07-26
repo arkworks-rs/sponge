@@ -1,5 +1,5 @@
 use crate::constraints::AbsorbGadget;
-use crate::constraints::CryptographicSpongeVar;
+use crate::constraints::{CryptographicSpongeExt, CryptographicSpongeVar};
 use crate::poseidon::{PoseidonParameters, PoseidonSponge};
 use crate::DuplexSpongeMode;
 use ark_ff::{FpParameters, PrimeField};
@@ -28,6 +28,10 @@ pub struct PoseidonSpongeVar<F: PrimeField> {
     pub state: Vec<FpVar<F>>,
     /// The mode
     pub mode: DuplexSpongeMode,
+}
+
+impl<F: PrimeField> CryptographicSpongeExt<F> for PoseidonSponge<F> {
+    type Var = PoseidonSpongeVar<F>;
 }
 
 impl<F: PrimeField> PoseidonSpongeVar<F> {
