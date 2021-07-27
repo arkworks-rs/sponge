@@ -90,7 +90,7 @@ pub fn bits_le_to_nonnative<'a, F: PrimeField, CF: PrimeField>(
 
 /// Enables simple access to the "gadget" version of the sponge.
 /// Simplifies trait bounds in downstream generic code.
-pub trait CryptographicSpongeExt<CF: PrimeField>: CryptographicSponge {
+pub trait SpongeWithGadget<CF: PrimeField>: CryptographicSponge {
     /// The gadget version of `Self`.
     type Var: CryptographicSpongeVar<CF, Self>;
 }
