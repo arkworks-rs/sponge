@@ -10,7 +10,7 @@
 
 - [\#22](https://github.com/arkworks-rs/sponge/pull/22) Add traits and derivations for default Poseidon parameters.
 
-- [\#24](https://github.com/arkworks-rs/sponge/pull/24) Add `CryptographicSpongeExt` trait that enables getting the gadget version of a sponge.
+- [\#24](https://github.com/arkworks-rs/sponge/pull/24) Add `SpongeWithGadget` trait that enables getting the gadget version of a sponge.
 
 ### Improvements
 
