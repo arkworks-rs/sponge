@@ -1,5 +1,5 @@
 use crate::constraints::AbsorbGadget;
-use crate::constraints::{SpongeWithGadget, CryptographicSpongeVar};
+use crate::constraints::{CryptographicSpongeVar, SpongeWithGadget};
 use crate::poseidon::{PoseidonParameters, PoseidonSponge};
 use crate::DuplexSpongeMode;
 use ark_ff::{FpParameters, PrimeField};
