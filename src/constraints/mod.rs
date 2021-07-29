@@ -88,6 +88,13 @@ pub fn bits_le_to_nonnative<'a, F: PrimeField, CF: PrimeField>(
     Ok(output)
 }
 
+/// Enables simple access to the "gadget" version of the sponge.
+/// Simplifies trait bounds in downstream generic code.
+pub trait SpongeWithGadget<CF: PrimeField>: CryptographicSponge {
+    /// The gadget version of `Self`.
+    type Var: CryptographicSpongeVar<CF, Self>;
+}
+
 /// The interface for a cryptographic sponge constraints on field `CF`.
 /// A sponge can `absorb` or take in inputs and later `squeeze` or output bytes or field elements.
 /// The outputs are dependent on previous `absorb` and `squeeze` calls.
