@@ -1,13 +1,14 @@
 use ark_ec::{ModelParameters, SWModelParameters, TEModelParameters};
 use ark_ff::{Field, PrimeField};
-use ark_r1cs_std::bits::boolean::Boolean;
 use ark_r1cs_std::bits::uint8::UInt8;
-use ark_r1cs_std::fields::fp::FpVar;
-use ark_r1cs_std::fields::{FieldOpsBounds, FieldVar};
 use ark_r1cs_std::groups::curves::short_weierstrass::{
     AffineVar as SWAffineVar, ProjectiveVar as SWProjectiveVar,
 };
 use ark_r1cs_std::groups::curves::twisted_edwards::AffineVar as TEAffineVar;
+use ark_r1cs_std::{
+    bits::boolean::Boolean,
+    fields::{fp::FpVar, FieldOpsBounds, FieldWithVar},
+};
 use ark_r1cs_std::{ToBytesGadget, ToConstraintFieldGadget};
 use ark_relations::r1cs::SynthesisError;
 use ark_std::vec;
@@ -90,14 +91,16 @@ impl<F: PrimeField> AbsorbGadget<F> for FpVar<F> {
     }
 }
 
+type BFVar<P> = <<P as ModelParameters>::BaseField as FieldWithVar>::Var;
+
 macro_rules! impl_absorbable_group {
     ($group:ident, $params:ident) => {
-        impl<P, F> AbsorbGadget<<P::BaseField as Field>::BasePrimeField> for $group<P, F>
+        impl<P> AbsorbGadget<<P::BaseField as Field>::BasePrimeField> for $group<P>
         where
             P: $params,
-            F: FieldVar<P::BaseField, <P::BaseField as Field>::BasePrimeField>,
-            for<'a> &'a F: FieldOpsBounds<'a, P::BaseField, F>,
-            F: ToConstraintFieldGadget<<P::BaseField as Field>::BasePrimeField>,
+            P::BaseField: FieldWithVar,
+            for<'a> &'a BFVar<P>: FieldOpsBounds<'a, P::BaseField, BFVar<P>>,
+            BFVar<P>: ToConstraintFieldGadget<<P::BaseField as Field>::BasePrimeField>,
         {
             fn to_sponge_bytes(
                 &self,
@@ -117,12 +120,12 @@ macro_rules! impl_absorbable_group {
 impl_absorbable_group!(TEAffineVar, TEModelParameters);
 impl_absorbable_group!(SWAffineVar, SWModelParameters);
 
-impl<P, F> AbsorbGadget<<P::BaseField as Field>::BasePrimeField> for SWProjectiveVar<P, F>
+impl<P> AbsorbGadget<<P::BaseField as Field>::BasePrimeField> for SWProjectiveVar<P>
 where
     P: SWModelParameters,
-    F: FieldVar<P::BaseField, <P::BaseField as Field>::BasePrimeField>,
-    for<'a> &'a F: FieldOpsBounds<'a, P::BaseField, F>,
-    F: ToConstraintFieldGadget<<P::BaseField as Field>::BasePrimeField>,
+    P::BaseField: FieldWithVar,
+    for<'a> &'a BFVar<P>: FieldOpsBounds<'a, P::BaseField, BFVar<P>>,
+    BFVar<P>: ToConstraintFieldGadget<<P::BaseField as Field>::BasePrimeField>,
 {
     fn to_sponge_bytes(
         &self,
