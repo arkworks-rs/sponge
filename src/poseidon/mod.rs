@@ -142,7 +142,7 @@ impl<F: PrimeField> PoseidonSponge<F> {
             "there should never be a reason to pad an empty buffer"
         );
 
-        // Append 00...10. Then appends zeros.  Then add 1 to the last bit.
+        // Append 00...10. Then append zeros. Then set the last bit to 1.
         let public_bytes = &mut self.state[self.parameters.capacity..];
         public_bytes[bytes_written] = F::from(2u8);
         for b in public_bytes[(bytes_written + 1)..rate].iter_mut() {
@@ -354,7 +354,12 @@ impl<F: PrimeField> FieldBasedCryptographicSponge<F> for PoseidonSponge<F> {
         let mut squeezed_elems = vec![F::zero(); num_elements];
         match self.mode {
             DuplexSpongeMode::Absorbing { next_absorb_index } => {
-                self.multirate_pad(next_absorb_index);
+                // If there's a value that hasn't been fully absorbed, pad and absorb it.
+                let capacity = self.parameters.capacity;
+                // Pad out the remaining input, then permute
+                if next_absorb_index > capacity {
+                    self.multirate_pad(next_absorb_index - capacity);
+                }
                 self.permute();
                 self.squeeze_internal(0, &mut squeezed_elems);
             }
