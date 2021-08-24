@@ -456,4 +456,24 @@ mod test {
             )
         );
     }
+
+    // Tests that H(1) != H(1, 0)
+    #[should_panic]
+    #[test]
+    fn test_collision() {
+        let sponge_param = TestFr::get_default_poseidon_parameters(2, false).unwrap();
+
+        let hash1 = {
+            let mut sponge = PoseidonSponge::<TestFr>::new(&sponge_param);
+            sponge.absorb(&vec![TestFr::from(1u8)]);
+            sponge.squeeze_native_field_elements(1)[0]
+        };
+        let hash2 = {
+            let mut sponge = PoseidonSponge::<TestFr>::new(&sponge_param);
+            sponge.absorb(&vec![TestFr::from(1u8), TestFr::from(0u8)]);
+            sponge.squeeze_native_field_elements(1)[0]
+        };
+
+        assert_eq!(hash1, hash2);
+    }
 }
