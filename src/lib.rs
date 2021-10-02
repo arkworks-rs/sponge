@@ -11,8 +11,7 @@
     trivial_casts,
     trivial_numeric_casts,
     unused,
-    variant_size_differences,
-    warnings
+    variant_size_differences
 )]
 #![forbid(unsafe_code)]
 
