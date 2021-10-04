@@ -2,6 +2,8 @@
 
 ## Pending
 
+* Added multirate padding to Poseidon duplex
+
 ### Breaking changes
 
 - [\#22](https://github.com/arkworks-rs/sponge/pull/22) Clean up the Poseidon parameter and sponge structures.
