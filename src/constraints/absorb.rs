@@ -14,7 +14,7 @@ use ark_relations::r1cs::SynthesisError;
 use ark_std::vec;
 use ark_std::vec::Vec;
 /// An interface for objects that can be absorbed by a `CryptographicSpongeVar` whose constraint field
-/// is `CF`.
+/// is `F`.
 pub trait AbsorbGadget<F: PrimeField> {
     /// Converts the object into a list of bytes that can be absorbed by a `CryptographicSpongeVar`.
     /// return the list.
