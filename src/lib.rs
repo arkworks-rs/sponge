@@ -28,8 +28,8 @@ pub use absorb::*;
 
 /// The sponge for Poseidon
 ///
-/// This implementation of Poseidon is entirely from Fractal's implementation in [COS20][cos]
-/// with small syntax changes.
+/// This implementation of Poseidon was derived from Fractal's implementation in
+/// [COS20][cos].
 ///
 /// [cos]: https://eprint.iacr.org/2019/1076
 pub mod poseidon;
@@ -110,7 +110,7 @@ pub trait CryptographicSponge: Clone {
     type Parameters;
 
     /// Initialize a new instance of the sponge.
-    fn new(params: &Self::Parameters) -> Self;
+    fn new(params: Self::Parameters) -> Self;
 
     /// Absorb an input into the sponge.
     fn absorb(&mut self, input: &impl Absorb);
@@ -183,18 +183,6 @@ pub trait FieldBasedCryptographicSponge<CF: PrimeField>: CryptographicSponge {
             squeeze_field_elements_with_sizes_default_impl(self, sizes)
         }
     }
-}
-
-/// An extension for the interface of a cryptographic sponge.
-/// In addition to operations defined in `CryptographicSponge`, `SpongeExt` can convert itself to
-/// a state, and instantiate itself from state.
-pub trait SpongeExt: CryptographicSponge {
-    /// The full state of the cryptographic sponge.
-    type State: Clone;
-    /// Returns a sponge that uses `state`.
-    fn from_state(state: Self::State, params: &Self::Parameters) -> Self;
-    /// Consumes `self` and returns the state.
-    fn into_state(self) -> Self::State;
 }
 
 /// The mode structure for duplex sponges

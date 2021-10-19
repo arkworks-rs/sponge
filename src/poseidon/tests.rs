@@ -1,17 +1,110 @@
-use crate::poseidon::{PoseidonParameters, PoseidonSponge};
-use crate::{absorb, collect_sponge_bytes, collect_sponge_field_elements};
-use crate::{Absorb, AbsorbWithLength, CryptographicSponge, FieldBasedCryptographicSponge};
-use ark_ff::{One, PrimeField, UniformRand};
+use ark_ff::{
+    field_new, BigInteger256, FftParameters, Fp256, Fp256Parameters, FpParameters, One, PrimeField,
+    UniformRand,
+};
 use ark_std::test_rng;
-use ark_test_curves::bls12_381::Fr;
+use ark_test_curves::bls12_381::{Fr, FrParameters};
+
+use crate::{
+    absorb, collect_sponge_bytes, collect_sponge_field_elements, Absorb, AbsorbWithLength,
+    CryptographicSponge, FieldBasedCryptographicSponge,
+};
+
+use super::{
+    Parameters, PoseidonDefaultParameters, PoseidonDefaultParametersEntry,
+    PoseidonDefaultParametersField, Sponge,
+};
+
+pub struct TestFrParameters;
+
+impl Fp256Parameters for TestFrParameters {}
+impl FftParameters for TestFrParameters {
+    type BigInt = <FrParameters as FftParameters>::BigInt;
+    const TWO_ADICITY: u32 = FrParameters::TWO_ADICITY;
+    const TWO_ADIC_ROOT_OF_UNITY: Self::BigInt = FrParameters::TWO_ADIC_ROOT_OF_UNITY;
+}
+
+// This TestFrParameters is the same as the BLS12-381's Fr.
+// MODULUS = 52435875175126190479447740508185965837690552500527637822603658699938581184513
+impl FpParameters for TestFrParameters {
+    const MODULUS: BigInteger256 = FrParameters::MODULUS;
+    const MODULUS_BITS: u32 = FrParameters::MODULUS_BITS;
+    const CAPACITY: u32 = FrParameters::CAPACITY;
+    const REPR_SHAVE_BITS: u32 = FrParameters::REPR_SHAVE_BITS;
+    const R: BigInteger256 = FrParameters::R;
+    const R2: BigInteger256 = FrParameters::R2;
+    const INV: u64 = FrParameters::INV;
+    const GENERATOR: BigInteger256 = FrParameters::GENERATOR;
+    const MODULUS_MINUS_ONE_DIV_TWO: BigInteger256 = FrParameters::MODULUS_MINUS_ONE_DIV_TWO;
+    const T: BigInteger256 = FrParameters::T;
+    const T_MINUS_ONE_DIV_TWO: BigInteger256 = FrParameters::T_MINUS_ONE_DIV_TWO;
+}
+
+impl PoseidonDefaultParameters for TestFrParameters {
+    const PARAMS_OPT_FOR_CONSTRAINTS: [PoseidonDefaultParametersEntry; 7] = [
+        PoseidonDefaultParametersEntry::new(2, 17, 8, 31, 0),
+        PoseidonDefaultParametersEntry::new(3, 5, 8, 56, 0),
+        PoseidonDefaultParametersEntry::new(4, 5, 8, 56, 0),
+        PoseidonDefaultParametersEntry::new(5, 5, 8, 57, 0),
+        PoseidonDefaultParametersEntry::new(6, 5, 8, 57, 0),
+        PoseidonDefaultParametersEntry::new(7, 5, 8, 57, 0),
+        PoseidonDefaultParametersEntry::new(8, 5, 8, 57, 0),
+    ];
+    const PARAMS_OPT_FOR_WEIGHTS: [PoseidonDefaultParametersEntry; 7] = [
+        PoseidonDefaultParametersEntry::new(2, 257, 8, 13, 0),
+        PoseidonDefaultParametersEntry::new(3, 257, 8, 13, 0),
+        PoseidonDefaultParametersEntry::new(4, 257, 8, 13, 0),
+        PoseidonDefaultParametersEntry::new(5, 257, 8, 13, 0),
+        PoseidonDefaultParametersEntry::new(6, 257, 8, 13, 0),
+        PoseidonDefaultParametersEntry::new(7, 257, 8, 13, 0),
+        PoseidonDefaultParametersEntry::new(8, 257, 8, 13, 0),
+    ];
+}
+
+pub type TestFr = Fp256<TestFrParameters>;
+
+#[test]
+fn test_poseidon_sponge_consistency() {
+    let sponge_param = TestFr::get_default_poseidon_parameters(2, false).unwrap();
+
+    let mut sponge = Sponge::<TestFr>::new(sponge_param);
+    sponge.absorb(&vec![
+        TestFr::from(0u8),
+        TestFr::from(1u8),
+        TestFr::from(2u8),
+    ]);
+    let res = sponge.squeeze_native_field_elements(3);
+    assert_eq!(
+        res[0],
+        field_new!(
+            TestFr,
+            "40442793463571304028337753002242186710310163897048962278675457993207843616876"
+        )
+    );
+    assert_eq!(
+        res[1],
+        field_new!(
+            TestFr,
+            "2664374461699898000291153145224099287711224021716202960480903840045233645301"
+        )
+    );
+    assert_eq!(
+        res[2],
+        field_new!(
+            TestFr,
+            "50191078828066923662070228256530692951801504043422844038937334196346054068797"
+        )
+    );
+}
+
 fn assert_different_encodings<F: PrimeField, A: Absorb>(a: &A, b: &A) {
     let bytes1 = a.to_sponge_bytes_as_vec();
     let bytes2 = b.to_sponge_bytes_as_vec();
     assert_ne!(bytes1, bytes2);
 
     let sponge_param = poseidon_parameters_for_test();
-    let mut sponge1 = PoseidonSponge::<F>::new(&sponge_param);
-    let mut sponge2 = PoseidonSponge::<F>::new(&sponge_param);
+    let mut sponge1 = Sponge::<F>::new(sponge_param.clone());
+    let mut sponge2 = Sponge::<F>::new(sponge_param);
 
     sponge1.absorb(&a);
     sponge2.absorb(&b);
@@ -72,7 +165,7 @@ fn test_squeeze_cast_native() {
     let mut rng = test_rng();
     let sponge_param = poseidon_parameters_for_test();
     let elem = Fr::rand(&mut rng);
-    let mut sponge1 = PoseidonSponge::<Fr>::new(&sponge_param);
+    let mut sponge1 = Sponge::<Fr>::new(sponge_param);
     sponge1.absorb(&elem);
     let mut sponge2 = sponge1.clone();
 
@@ -86,11 +179,11 @@ fn test_squeeze_cast_native() {
 #[test]
 fn test_macros() {
     let sponge_param = poseidon_parameters_for_test();
-    let mut sponge1 = PoseidonSponge::<Fr>::new(&sponge_param);
+    let mut sponge1 = Sponge::<Fr>::new(sponge_param.clone());
     sponge1.absorb(&vec![1, 2, 3, 4, 5, 6]);
     sponge1.absorb(&Fr::from(114514u128));
 
-    let mut sponge2 = PoseidonSponge::<Fr>::new(&sponge_param);
+    let mut sponge2 = Sponge::<Fr>::new(sponge_param);
     absorb!(&mut sponge2, vec![1, 2, 3, 4, 5, 6], Fr::from(114514u128));
 
     let expected = sponge1.squeeze_native_field_elements(3);
@@ -116,7 +209,7 @@ fn test_macros() {
 }
 
 /// Generate default parameters (bls381-fr-only) for alpha = 17, state-size = 8
-pub(crate) fn poseidon_parameters_for_test<F: PrimeField>() -> PoseidonParameters<F> {
+pub(crate) fn poseidon_parameters_for_test<F: PrimeField>() -> Parameters<F> {
     let alpha = 17;
     let mds = vec![
         vec![
@@ -807,7 +900,7 @@ pub(crate) fn poseidon_parameters_for_test<F: PrimeField>() -> PoseidonParameter
     let partial_rounds = total_rounds - full_rounds;
     let capacity = 1;
     let rate = 2;
-    PoseidonParameters {
+    Parameters {
         full_rounds,
         partial_rounds,
         alpha,
