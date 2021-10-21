@@ -1,6 +1,8 @@
+//! Constraints for Poseidon.
+
 use crate::constraints::AbsorbGadget;
 use crate::constraints::{CryptographicSpongeVar, SpongeWithGadget};
-use crate::poseidon::{PoseidonParameters, PoseidonSponge};
+use crate::poseidon::{Parameters, Sponge};
 use crate::DuplexSpongeMode;
 use ark_ff::{FpParameters, PrimeField};
 use ark_r1cs_std::fields::fp::FpVar;
@@ -21,7 +23,7 @@ pub struct PoseidonSpongeVar<F: PrimeField> {
     pub cs: ConstraintSystemRef<F>,
 
     /// Sponge Parameters
-    pub parameters: PoseidonParameters<F>,
+    pub parameters: Parameters<F>,
 
     // Sponge State
     /// The sponge's state
@@ -30,7 +32,7 @@ pub struct PoseidonSpongeVar<F: PrimeField> {
     pub mode: DuplexSpongeMode,
 }
 
-impl<F: PrimeField> SpongeWithGadget<F> for PoseidonSponge<F> {
+impl<F: PrimeField> SpongeWithGadget<F> for Sponge<F> {
     type Var = PoseidonSpongeVar<F>;
 }
 
@@ -179,11 +181,11 @@ impl<F: PrimeField> PoseidonSpongeVar<F> {
     }
 }
 
-impl<F: PrimeField> CryptographicSpongeVar<F, PoseidonSponge<F>> for PoseidonSpongeVar<F> {
-    type Parameters = PoseidonParameters<F>;
+impl<F: PrimeField> CryptographicSpongeVar<F, Sponge<F>> for PoseidonSpongeVar<F> {
+    type Parameters = Parameters<F>;
 
     #[tracing::instrument(target = "r1cs", skip(cs))]
-    fn new(cs: ConstraintSystemRef<F>, parameters: &PoseidonParameters<F>) -> Self {
+    fn new(cs: ConstraintSystemRef<F>, parameters: &Parameters<F>) -> Self {
         let zero = FpVar::<F>::zero();
         let state = vec![zero; parameters.rate + parameters.capacity];
         let mode = DuplexSpongeMode::Absorbing {
@@ -295,7 +297,7 @@ mod tests {
     use crate::constraints::CryptographicSpongeVar;
     use crate::poseidon::constraints::PoseidonSpongeVar;
     use crate::poseidon::tests::poseidon_parameters_for_test;
-    use crate::poseidon::PoseidonSponge;
+    use crate::poseidon::Sponge;
     use crate::{CryptographicSponge, FieldBasedCryptographicSponge};
     use ark_ff::UniformRand;
     use ark_r1cs_std::fields::fp::FpVar;
@@ -324,7 +326,7 @@ mod tests {
 
         let sponge_params = poseidon_parameters_for_test();
 
-        let mut native_sponge = PoseidonSponge::<Fr>::new(&sponge_params);
+        let mut native_sponge = Sponge::<Fr>::new(sponge_params.clone());
         let mut constraint_sponge = PoseidonSpongeVar::<Fr>::new(cs.clone(), &sponge_params);
 
         native_sponge.absorb(&absorb1);

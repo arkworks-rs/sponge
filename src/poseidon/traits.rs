@@ -1,5 +1,7 @@
+//! default parameters traits for Poseidon
+
 use crate::poseidon::grain_lfsr::PoseidonGrainLFSR;
-use crate::poseidon::PoseidonParameters;
+use crate::poseidon::Parameters;
 use ark_ff::{fields::models::*, FpParameters, PrimeField};
 use ark_std::{vec, vec::Vec};
 
@@ -62,14 +64,14 @@ pub trait PoseidonDefaultParametersField: PrimeField {
     fn get_default_poseidon_parameters(
         rate: usize,
         optimized_for_weights: bool,
-    ) -> Option<PoseidonParameters<Self>>;
+    ) -> Option<Parameters<Self>>;
 }
 
 /// Internal function that uses the `PoseidonDefaultParameters` to compute the Poseidon parameters.
 pub fn get_default_poseidon_parameters_internal<F: PrimeField, P: PoseidonDefaultParameters>(
     rate: usize,
     optimized_for_weights: bool,
-) -> Option<PoseidonParameters<F>> {
+) -> Option<Parameters<F>> {
     let params_set = if !optimized_for_weights {
         P::PARAMS_OPT_FOR_CONSTRAINTS
     } else {
@@ -86,7 +88,7 @@ pub fn get_default_poseidon_parameters_internal<F: PrimeField, P: PoseidonDefaul
                 param.skip_matrices as u64,
             );
 
-            return Some(PoseidonParameters {
+            return Some(Parameters {
                 full_rounds: param.full_rounds,
                 partial_rounds: param.partial_rounds,
                 alpha: param.alpha as u64,
@@ -151,7 +153,7 @@ macro_rules! impl_poseidon_default_parameters_field {
             fn get_default_poseidon_parameters(
                 rate: usize,
                 optimized_for_weights: bool,
-            ) -> Option<PoseidonParameters<Self>> {
+            ) -> Option<Parameters<Self>> {
                 get_default_poseidon_parameters_internal::<Self, P>(rate, optimized_for_weights)
             }
         }
