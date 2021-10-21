@@ -1,4 +1,5 @@
 use ark_ff::PrimeField;
+use ark_std::vec::Vec;
 
 /// Parameters describing a Poseidon instance.
 #[derive(Clone, Debug)]

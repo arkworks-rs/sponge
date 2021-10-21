@@ -1,7 +1,8 @@
 use ark_ff::PrimeField;
-use std::{
+use ark_std::{
     ops::{Index, IndexMut},
     slice::SliceIndex,
+    vec,
 };
 
 use super::Parameters;

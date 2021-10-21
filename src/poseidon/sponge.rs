@@ -1,5 +1,5 @@
 use ark_ff::{BigInteger, FpParameters, PrimeField};
-use ark_std::{any::TypeId, vec::Vec};
+use ark_std::{any::TypeId, vec::Vec, vec};
 
 use crate::{
     batch_field_cast, squeeze_field_elements_with_sizes_default_impl, Absorb, CryptographicSponge,
