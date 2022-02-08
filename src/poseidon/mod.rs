@@ -1,3 +1,4 @@
+use std::marker::PhantomData;
 use crate::{
     batch_field_cast, squeeze_field_elements_with_sizes_default_impl, Absorb, CryptographicSponge,
     DuplexSpongeMode, FieldBasedCryptographicSponge, FieldElementSize, SpongeExt,
@@ -16,8 +17,10 @@ mod tests;
 /// default parameters traits for Poseidon
 pub mod traits;
 pub use traits::*;
+use crate::poseidon::permute::{CorrectPermute, PoseidonPermute};
 
 mod grain_lfsr;
+mod permute;
 
 /// Parameters and RNG used
 #[derive(Clone, Debug)]
@@ -41,14 +44,14 @@ pub struct PoseidonParameters<F: PrimeField> {
     pub capacity: usize,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 /// A duplex sponge based using the Poseidon permutation.
 ///
 /// This implementation of Poseidon is entirely from Fractal's implementation in [COS20][cos]
 /// with small syntax changes.
 ///
 /// [cos]: https://eprint.iacr.org/2019/1076
-pub struct PoseidonSponge<F: PrimeField> {
+pub struct PoseidonSponge<F: PrimeField, P: PoseidonPermute<F> = CorrectPermute<F>> {
     /// Sponge Parameters
     pub parameters: PoseidonParameters<F>,
 
@@ -57,64 +60,13 @@ pub struct PoseidonSponge<F: PrimeField> {
     pub state: Vec<F>,
     /// Current mode (whether its absorbing or squeezing)
     pub mode: DuplexSpongeMode,
+    _permute: PhantomData<P>
 }
 
-impl<F: PrimeField> PoseidonSponge<F> {
-    fn apply_s_box(&self, state: &mut [F], is_full_round: bool) {
-        // Full rounds apply the S Box (x^alpha) to every element of state
-        if is_full_round {
-            for elem in state {
-                *elem = elem.pow(&[self.parameters.alpha]);
-            }
-        }
-        // Partial rounds apply the S Box (x^alpha) to just the first element of state
-        else {
-            state[0] = state[0].pow(&[self.parameters.alpha]);
-        }
-    }
-
-    fn apply_ark(&self, state: &mut [F], round_number: usize) {
-        for (i, state_elem) in state.iter_mut().enumerate() {
-            state_elem.add_assign(&self.parameters.ark[round_number][i]);
-        }
-    }
-
-    fn apply_mds(&self, state: &mut [F]) {
-        let mut new_state = Vec::new();
-        for i in 0..state.len() {
-            let mut cur = F::zero();
-            for (j, state_elem) in state.iter().enumerate() {
-                let term = state_elem.mul(&self.parameters.mds[i][j]);
-                cur.add_assign(&term);
-            }
-            new_state.push(cur);
-        }
-        state.clone_from_slice(&new_state[..state.len()])
-    }
+impl<F: PrimeField, P: PoseidonPermute<F>> PoseidonSponge<F, P> {
 
     fn permute(&mut self) {
-        let full_rounds_over_2 = self.parameters.full_rounds / 2;
-        let mut state = self.state.clone();
-        for i in 0..full_rounds_over_2 {
-            self.apply_ark(&mut state, i);
-            self.apply_s_box(&mut state, true);
-            self.apply_mds(&mut state);
-        }
-
-        for i in full_rounds_over_2..(full_rounds_over_2 + self.parameters.partial_rounds) {
-            self.apply_ark(&mut state, i);
-            self.apply_s_box(&mut state, false);
-            self.apply_mds(&mut state);
-        }
-
-        for i in (full_rounds_over_2 + self.parameters.partial_rounds)
-            ..(self.parameters.partial_rounds + self.parameters.full_rounds)
-        {
-            self.apply_ark(&mut state, i);
-            self.apply_s_box(&mut state, true);
-            self.apply_mds(&mut state);
-        }
-        self.state = state;
+        P::permute(&mut self.state, &self.parameters);
     }
 
     // Absorbs everything in elements, this does not end in an absorbtion.
@@ -213,7 +165,7 @@ impl<F: PrimeField> PoseidonParameters<F> {
     }
 }
 
-impl<F: PrimeField> CryptographicSponge for PoseidonSponge<F> {
+impl<F: PrimeField, P: PoseidonPermute<F>> CryptographicSponge for PoseidonSponge<F, P> {
     type Parameters = PoseidonParameters<F>;
 
     fn new(parameters: &Self::Parameters) -> Self {
@@ -226,6 +178,7 @@ impl<F: PrimeField> CryptographicSponge for PoseidonSponge<F> {
             parameters: parameters.clone(),
             state,
             mode,
+            _permute: PhantomData
         }
     }
 
@@ -317,7 +270,7 @@ impl<F: PrimeField> CryptographicSponge for PoseidonSponge<F> {
     }
 }
 
-impl<F: PrimeField> FieldBasedCryptographicSponge<F> for PoseidonSponge<F> {
+impl<F: PrimeField, P: PoseidonPermute<F>> FieldBasedCryptographicSponge<F> for PoseidonSponge<F, P> {
     fn squeeze_native_field_elements(&mut self, num_elements: usize) -> Vec<F> {
         let mut squeezed_elems = vec![F::zero(); num_elements];
         match self.mode {
@@ -348,7 +301,7 @@ pub struct PoseidonSpongeState<F: PrimeField> {
     mode: DuplexSpongeMode,
 }
 
-impl<CF: PrimeField> SpongeExt for PoseidonSponge<CF> {
+impl<CF: PrimeField, P: PoseidonPermute<CF>> SpongeExt for PoseidonSponge<CF, P> {
     type State = PoseidonSpongeState<CF>;
 
     fn from_state(state: Self::State, params: &Self::Parameters) -> Self {
