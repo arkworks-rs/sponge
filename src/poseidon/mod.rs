@@ -2,7 +2,7 @@ use crate::{
     batch_field_cast, squeeze_field_elements_with_sizes_default_impl, Absorb, CryptographicSponge,
     DuplexSpongeMode, FieldBasedCryptographicSponge, FieldElementSize, SpongeExt,
 };
-use ark_ff::{BigInteger, FpParameters, PrimeField};
+use ark_ff::{BigInteger, PrimeField};
 use ark_std::any::TypeId;
 use ark_std::vec;
 use ark_std::vec::Vec;
@@ -254,14 +254,14 @@ impl<F: PrimeField> CryptographicSponge for PoseidonSponge<F> {
     }
 
     fn squeeze_bytes(&mut self, num_bytes: usize) -> Vec<u8> {
-        let usable_bytes = (F::Params::CAPACITY / 8) as usize;
+        let usable_bytes = ((F::MODULUS_BIT_SIZE - 1) / 8) as usize;
 
         let num_elements = (num_bytes + usable_bytes - 1) / usable_bytes;
         let src_elements = self.squeeze_native_field_elements(num_elements);
 
         let mut bytes: Vec<u8> = Vec::with_capacity(usable_bytes * num_elements);
         for elem in &src_elements {
-            let elem_bytes = elem.into_repr().to_bytes_le();
+            let elem_bytes = elem.into_bigint().to_bytes_le();
             bytes.extend_from_slice(&elem_bytes[..usable_bytes]);
         }
 
@@ -270,14 +270,14 @@ impl<F: PrimeField> CryptographicSponge for PoseidonSponge<F> {
     }
 
     fn squeeze_bits(&mut self, num_bits: usize) -> Vec<bool> {
-        let usable_bits = F::Params::CAPACITY as usize;
+        let usable_bits = (F::MODULUS_BIT_SIZE - 1) as usize;
 
         let num_elements = (num_bits + usable_bits - 1) / usable_bits;
         let src_elements = self.squeeze_native_field_elements(num_elements);
 
         let mut bits: Vec<bool> = Vec::with_capacity(usable_bits * num_elements);
         for elem in &src_elements {
-            let elem_bits = elem.into_repr().to_bits_le();
+            let elem_bits = elem.into_bigint().to_bits_le();
             bits.extend_from_slice(&elem_bits[..usable_bits]);
         }
 
@@ -372,35 +372,47 @@ mod test {
         PoseidonDefaultParameters, PoseidonDefaultParametersEntry, PoseidonDefaultParametersField,
     };
     use crate::{poseidon::PoseidonSponge, CryptographicSponge, FieldBasedCryptographicSponge};
-    use ark_ff::{field_new, BigInteger256, FftParameters, Fp256, Fp256Parameters, FpParameters};
-    use ark_test_curves::bls12_381::FrParameters;
+    use ark_ff::{BigInteger256, Fp256, FpConfig, MontBackend, MontConfig, MontFp};
+    use ark_test_curves::bls12_381::FrConfig;
 
-    pub struct TestFrParameters;
+    // pub struct TestFrParameters;
+    //
+    // impl Fp256Parameters for TestFrParameters {}
+    // impl FftParameters for TestFrParameters {
+    //     type BigInt = <FrParameters as FftParameters>::BigInt;
+    //     const TWO_ADICITY: u32 = FrParameters::TWO_ADICITY;
+    //     const TWO_ADIC_ROOT_OF_UNITY: Self::BigInt = FrParameters::TWO_ADIC_ROOT_OF_UNITY;
+    // }
+    //
+    // // This TestFrParameters is the same as the BLS12-381's Fr.
+    // // MODULUS = 52435875175126190479447740508185965837690552500527637822603658699938581184513
+    // impl FpParameters for TestFrParameters {
+    //     const MODULUS: BigInteger256 = FrParameters::MODULUS;
+    //     const MODULUS_BITS: u32 = FrParameters::MODULUS_BITS;
+    //     const CAPACITY: u32 = FrParameters::CAPACITY;
+    //     const REPR_SHAVE_BITS: u32 = FrParameters::REPR_SHAVE_BITS;
+    //     const R: BigInteger256 = FrParameters::R;
+    //     const R2: BigInteger256 = FrParameters::R2;
+    //     const INV: u64 = FrParameters::INV;
+    //     const GENERATOR: BigInteger256 = FrParameters::GENERATOR;
+    //     const MODULUS_MINUS_ONE_DIV_TWO: BigInteger256 = FrParameters::MODULUS_MINUS_ONE_DIV_TWO;
+    //     const T: BigInteger256 = FrParameters::T;
+    //     const T_MINUS_ONE_DIV_TWO: BigInteger256 = FrParameters::T_MINUS_ONE_DIV_TWO;
+    // }
 
-    impl Fp256Parameters for TestFrParameters {}
-    impl FftParameters for TestFrParameters {
-        type BigInt = <FrParameters as FftParameters>::BigInt;
-        const TWO_ADICITY: u32 = FrParameters::TWO_ADICITY;
-        const TWO_ADIC_ROOT_OF_UNITY: Self::BigInt = FrParameters::TWO_ADIC_ROOT_OF_UNITY;
+    pub struct TestConfig;
+    pub type Fr = Fp256<MontBackend<TestConfig, 4>>;
+
+    impl MontConfig<4> for TestConfig {
+        const MODULUS: BigInteger256 = FrConfig::MODULUS;
+
+        const GENERATOR: Fr = FrConfig::GENERATOR;
+
+        const TWO_ADIC_ROOT_OF_UNITY: Fr = FrConfig::TWO_ADIC_ROOT_OF_UNITY;
     }
 
-    // This TestFrParameters is the same as the BLS12-381's Fr.
-    // MODULUS = 52435875175126190479447740508185965837690552500527637822603658699938581184513
-    impl FpParameters for TestFrParameters {
-        const MODULUS: BigInteger256 = FrParameters::MODULUS;
-        const MODULUS_BITS: u32 = FrParameters::MODULUS_BITS;
-        const CAPACITY: u32 = FrParameters::CAPACITY;
-        const REPR_SHAVE_BITS: u32 = FrParameters::REPR_SHAVE_BITS;
-        const R: BigInteger256 = FrParameters::R;
-        const R2: BigInteger256 = FrParameters::R2;
-        const INV: u64 = FrParameters::INV;
-        const GENERATOR: BigInteger256 = FrParameters::GENERATOR;
-        const MODULUS_MINUS_ONE_DIV_TWO: BigInteger256 = FrParameters::MODULUS_MINUS_ONE_DIV_TWO;
-        const T: BigInteger256 = FrParameters::T;
-        const T_MINUS_ONE_DIV_TWO: BigInteger256 = FrParameters::T_MINUS_ONE_DIV_TWO;
-    }
-
-    impl PoseidonDefaultParameters for TestFrParameters {
+    impl FpConfig<4> for TestConfig {}
+    impl PoseidonDefaultParameters<4> for TestConfig {
         const PARAMS_OPT_FOR_CONSTRAINTS: [PoseidonDefaultParametersEntry; 7] = [
             PoseidonDefaultParametersEntry::new(2, 17, 8, 31, 0),
             PoseidonDefaultParametersEntry::new(3, 5, 8, 56, 0),
@@ -421,7 +433,7 @@ mod test {
         ];
     }
 
-    pub type TestFr = Fp256<TestFrParameters>;
+    pub type TestFr = Fp256<TestConfig>;
 
     #[test]
     fn test_poseidon_sponge_consistency() {
@@ -436,21 +448,21 @@ mod test {
         let res = sponge.squeeze_native_field_elements(3);
         assert_eq!(
             res[0],
-            field_new!(
+            MontFp!(
                 TestFr,
                 "40442793463571304028337753002242186710310163897048962278675457993207843616876"
             )
         );
         assert_eq!(
             res[1],
-            field_new!(
+            MontFp!(
                 TestFr,
                 "2664374461699898000291153145224099287711224021716202960480903840045233645301"
             )
         );
         assert_eq!(
             res[2],
-            field_new!(
+            MontFp!(
                 TestFr,
                 "50191078828066923662070228256530692951801504043422844038937334196346054068797"
             )

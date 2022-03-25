@@ -2,7 +2,7 @@ use crate::constraints::AbsorbGadget;
 use crate::constraints::{CryptographicSpongeVar, SpongeWithGadget};
 use crate::poseidon::{PoseidonParameters, PoseidonSponge};
 use crate::DuplexSpongeMode;
-use ark_ff::{FpParameters, PrimeField};
+use ark_ff::PrimeField;
 use ark_r1cs_std::fields::fp::FpVar;
 use ark_r1cs_std::prelude::*;
 use ark_relations::r1cs::{ConstraintSystemRef, SynthesisError};
@@ -232,7 +232,7 @@ impl<F: PrimeField> CryptographicSpongeVar<F, PoseidonSponge<F>> for PoseidonSpo
 
     #[tracing::instrument(target = "r1cs", skip(self))]
     fn squeeze_bytes(&mut self, num_bytes: usize) -> Result<Vec<UInt8<F>>, SynthesisError> {
-        let usable_bytes = (F::Params::CAPACITY / 8) as usize;
+        let usable_bytes = ((F::MODULUS_BIT_SIZE - 1) / 8) as usize;
 
         let num_elements = (num_bytes + usable_bytes - 1) / usable_bytes;
         let src_elements = self.squeeze_field_elements(num_elements)?;
@@ -248,7 +248,7 @@ impl<F: PrimeField> CryptographicSpongeVar<F, PoseidonSponge<F>> for PoseidonSpo
 
     #[tracing::instrument(target = "r1cs", skip(self))]
     fn squeeze_bits(&mut self, num_bits: usize) -> Result<Vec<Boolean<F>>, SynthesisError> {
-        let usable_bits = F::Params::CAPACITY as usize;
+        let usable_bits = (F::MODULUS_BIT_SIZE - 1) as usize;
 
         let num_elements = (num_bits + usable_bits - 1) / usable_bits;
         let src_elements = self.squeeze_field_elements(num_elements)?;
