@@ -1,7 +1,7 @@
 use ark_ec::models::short_weierstrass_jacobian::GroupAffine as SWAffine;
 use ark_ec::models::twisted_edwards_extended::GroupAffine as TEAffine;
 use ark_ec::models::{SWModelParameters, TEModelParameters};
-use ark_ff::models::{Fp256, Fp320, Fp384, Fp768, Fp832, FpConfig};
+use ark_ff::models::{Fp, FpConfig};
 use ark_ff::{PrimeField, ToConstraintField};
 use ark_serialize::CanonicalSerialize;
 use ark_std::vec::Vec;
@@ -159,53 +159,20 @@ impl Absorb for bool {
     }
 }
 
-// macro_rules! impl_absorbable_field {
-//     ($field:ident, $params:ident) => {
-//         impl<P: $params> Absorb for $field<P> {
-//             fn to_sponge_bytes(&self, dest: &mut Vec<u8>) {
-//                 self.serialize(dest).unwrap()
-//             }
-//
-//             fn to_sponge_field_elements<F: PrimeField>(&self, dest: &mut Vec<F>) {
-//                 dest.push(field_cast(*self).unwrap())
-//             }
-//
-//             fn batch_to_sponge_field_elements<F: PrimeField>(batch: &[Self], dest: &mut Vec<F>)
-//             where
-//                 Self: Sized,
-//             {
-//                 batch_field_cast(batch, dest).unwrap();
-//             }
-//         }
-//     };
-// }
-
-macro_rules! impl_absorbable_field {
-    ($field:ident, $params:expr) => {
-        impl<P: FpConfig<$params>> Absorb for $field<P> {
-            fn to_sponge_bytes(&self, dest: &mut Vec<u8>) {
-                self.serialize(dest).unwrap()
-            }
-
-            fn to_sponge_field_elements<F: PrimeField>(&self, dest: &mut Vec<F>) {
-                dest.push(field_cast(*self).unwrap())
-            }
-
-            fn batch_to_sponge_field_elements<F: PrimeField>(batch: &[Self], dest: &mut Vec<F>)
-            where
-                Self: Sized,
-            {
-                batch_field_cast(batch, dest).unwrap();
-            }
-        }
-    };
+impl<P: FpConfig<N>, const N: usize> Absorb for Fp<P, N> {
+    fn to_sponge_bytes(&self, dest: &mut Vec<u8>) {
+        self.serialize(dest).unwrap()
+    }
+    fn to_sponge_field_elements<F: PrimeField>(&self, dest: &mut Vec<F>) {
+        dest.push(field_cast(*self).unwrap())
+    }
+    fn batch_to_sponge_field_elements<F: PrimeField>(batch: &[Self], dest: &mut Vec<F>)
+    where
+        Self: Sized,
+    {
+        batch_field_cast(batch, dest).unwrap();
+    }
 }
-
-impl_absorbable_field!(Fp256, 4);
-impl_absorbable_field!(Fp320, 5);
-impl_absorbable_field!(Fp384, 6);
-impl_absorbable_field!(Fp768, 12);
-impl_absorbable_field!(Fp832, 13);
 
 macro_rules! impl_absorbable_unsigned {
     ($t:ident) => {
