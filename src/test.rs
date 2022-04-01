@@ -1,21 +1,14 @@
 use crate::poseidon::{PoseidonDefaultConfig, PoseidonDefaultConfigEntry};
 use ark_ff::fields::Fp256;
-use ark_ff::{FpConfig, MontBackend, MontConfig};
+use ark_ff::{MontBackend, MontConfig};
 
 #[derive(MontConfig)]
 #[modulus = "52435875175126190479447740508185965837690552500527637822603658699938581184513"]
 #[generator = "7"]
-pub struct FrConfig;
-pub type Fr = Fp256<MontBackend<FrConfig, 4>>;
+pub struct FrBackend;
 
-const T: usize = FrConfig::TWO_ADICITY as usize;
-const THING: () = {
-    fn assert_impl_fp_config<F: FpConfig<N>, const N: usize>() {}
-
-    fn assert() {
-        assert_impl_fp_config::<FrConfig, 4>()
-    }
-};
+type FrConfig = MontBackend<FrBackend, 4>;
+pub type Fr = Fp256<FrConfig>;
 
 impl PoseidonDefaultConfig<4> for FrConfig {
     const PARAMS_OPT_FOR_CONSTRAINTS: [PoseidonDefaultConfigEntry; 7] = [

@@ -371,7 +371,7 @@ mod test {
     use crate::poseidon::PoseidonDefaultConfigField;
     use crate::test::Fr;
     use crate::{poseidon::PoseidonSponge, CryptographicSponge, FieldBasedCryptographicSponge};
-    use ark_ff::{MontConfig, MontFp};
+    use ark_ff::MontFp;
 
     #[test]
     fn test_poseidon_sponge_consistency() {
