@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use ark_ff::{BigInteger, FpParameters, PrimeField};
+use ark_ff::{BigInteger, PrimeField};
 use ark_std::vec::Vec;
 
 pub struct PoseidonGrainLFSR {
@@ -109,7 +109,7 @@ impl PoseidonGrainLFSR {
         &mut self,
         num_elems: usize,
     ) -> Vec<F> {
-        assert_eq!(F::Params::MODULUS_BITS as u64, self.prime_num_bits);
+        assert_eq!(F::MODULUS_BIT_SIZE as u64, self.prime_num_bits);
 
         let mut res = Vec::new();
         for _ in 0..num_elems {
@@ -122,7 +122,7 @@ impl PoseidonGrainLFSR {
                 // Construct the number
                 let bigint = F::BigInt::from_bits_le(&bits);
 
-                if let Some(f) = F::from_repr(bigint) {
+                if let Some(f) = F::from_bigint(bigint) {
                     res.push(f);
                     break;
                 }
@@ -133,7 +133,7 @@ impl PoseidonGrainLFSR {
     }
 
     pub fn get_field_elements_mod_p<F: PrimeField>(&mut self, num_elems: usize) -> Vec<F> {
-        assert_eq!(F::Params::MODULUS_BITS as u64, self.prime_num_bits);
+        assert_eq!(F::MODULUS_BIT_SIZE as u64, self.prime_num_bits);
 
         let mut res = Vec::new();
         for _ in 0..num_elems {
@@ -191,8 +191,8 @@ impl PoseidonGrainLFSR {
 #[cfg(test)]
 mod test {
     use crate::poseidon::grain_lfsr::PoseidonGrainLFSR;
-    use ark_ff::field_new;
-    use ark_test_curves::bls12_381::Fr;
+    use crate::test::Fr;
+    use ark_ff::MontFp;
 
     #[test]
     fn test_grain_lfsr_consistency() {
@@ -200,14 +200,14 @@ mod test {
 
         assert_eq!(
             lfsr.get_field_elements_rejection_sampling::<Fr>(1)[0],
-            field_new!(
+            MontFp!(
                 Fr,
                 "27117311055620256798560880810000042840428971800021819916023577129547249660720"
             )
         );
         assert_eq!(
             lfsr.get_field_elements_rejection_sampling::<Fr>(1)[0],
-            field_new!(
+            MontFp!(
                 Fr,
                 "51641662388546346858987925410984003801092143452466182801674685248597955169158"
             )

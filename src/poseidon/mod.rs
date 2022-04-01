@@ -2,7 +2,7 @@ use crate::{
     batch_field_cast, squeeze_field_elements_with_sizes_default_impl, Absorb, CryptographicSponge,
     DuplexSpongeMode, FieldBasedCryptographicSponge, FieldElementSize, SpongeExt,
 };
-use ark_ff::{BigInteger, FpParameters, PrimeField};
+use ark_ff::{BigInteger, PrimeField};
 use ark_std::any::TypeId;
 use ark_std::vec;
 use ark_std::vec::Vec;
@@ -19,9 +19,9 @@ pub use traits::*;
 
 mod grain_lfsr;
 
-/// Parameters and RNG used
+/// Config and RNG used
 #[derive(Clone, Debug)]
-pub struct PoseidonParameters<F: PrimeField> {
+pub struct PoseidonConfig<F: PrimeField> {
     /// Number of rounds in a full-round operation.
     pub full_rounds: usize,
     /// Number of rounds in a partial-round operation.
@@ -49,8 +49,8 @@ pub struct PoseidonParameters<F: PrimeField> {
 ///
 /// [cos]: https://eprint.iacr.org/2019/1076
 pub struct PoseidonSponge<F: PrimeField> {
-    /// Sponge Parameters
-    pub parameters: PoseidonParameters<F>,
+    /// Sponge Config
+    pub parameters: PoseidonConfig<F>,
 
     // Sponge State
     /// Current sponge's state (current elements in the permutation block)
@@ -182,7 +182,7 @@ impl<F: PrimeField> PoseidonSponge<F> {
     }
 }
 
-impl<F: PrimeField> PoseidonParameters<F> {
+impl<F: PrimeField> PoseidonConfig<F> {
     /// Initialize the parameter for Poseidon Sponge.
     pub fn new(
         full_rounds: usize,
@@ -214,9 +214,9 @@ impl<F: PrimeField> PoseidonParameters<F> {
 }
 
 impl<F: PrimeField> CryptographicSponge for PoseidonSponge<F> {
-    type Parameters = PoseidonParameters<F>;
+    type Config = PoseidonConfig<F>;
 
-    fn new(parameters: &Self::Parameters) -> Self {
+    fn new(parameters: &Self::Config) -> Self {
         let state = vec![F::zero(); parameters.rate + parameters.capacity];
         let mode = DuplexSpongeMode::Absorbing {
             next_absorb_index: 0,
@@ -254,14 +254,14 @@ impl<F: PrimeField> CryptographicSponge for PoseidonSponge<F> {
     }
 
     fn squeeze_bytes(&mut self, num_bytes: usize) -> Vec<u8> {
-        let usable_bytes = (F::Params::CAPACITY / 8) as usize;
+        let usable_bytes = ((F::MODULUS_BIT_SIZE - 1) / 8) as usize;
 
         let num_elements = (num_bytes + usable_bytes - 1) / usable_bytes;
         let src_elements = self.squeeze_native_field_elements(num_elements);
 
         let mut bytes: Vec<u8> = Vec::with_capacity(usable_bytes * num_elements);
         for elem in &src_elements {
-            let elem_bytes = elem.into_repr().to_bytes_le();
+            let elem_bytes = elem.into_bigint().to_bytes_le();
             bytes.extend_from_slice(&elem_bytes[..usable_bytes]);
         }
 
@@ -270,14 +270,14 @@ impl<F: PrimeField> CryptographicSponge for PoseidonSponge<F> {
     }
 
     fn squeeze_bits(&mut self, num_bits: usize) -> Vec<bool> {
-        let usable_bits = F::Params::CAPACITY as usize;
+        let usable_bits = (F::MODULUS_BIT_SIZE - 1) as usize;
 
         let num_elements = (num_bits + usable_bits - 1) / usable_bits;
         let src_elements = self.squeeze_native_field_elements(num_elements);
 
         let mut bits: Vec<bool> = Vec::with_capacity(usable_bits * num_elements);
         for elem in &src_elements {
-            let elem_bits = elem.into_repr().to_bits_le();
+            let elem_bits = elem.into_bigint().to_bits_le();
             bits.extend_from_slice(&elem_bits[..usable_bits]);
         }
 
@@ -351,7 +351,7 @@ pub struct PoseidonSpongeState<F: PrimeField> {
 impl<CF: PrimeField> SpongeExt for PoseidonSponge<CF> {
     type State = PoseidonSpongeState<CF>;
 
-    fn from_state(state: Self::State, params: &Self::Parameters) -> Self {
+    fn from_state(state: Self::State, params: &Self::Config) -> Self {
         let mut sponge = Self::new(params);
         sponge.mode = state.mode;
         sponge.state = state.state;
@@ -368,90 +368,36 @@ impl<CF: PrimeField> SpongeExt for PoseidonSponge<CF> {
 
 #[cfg(test)]
 mod test {
-    use crate::poseidon::{
-        PoseidonDefaultParameters, PoseidonDefaultParametersEntry, PoseidonDefaultParametersField,
-    };
+    use crate::poseidon::PoseidonDefaultConfigField;
+    use crate::test::Fr;
     use crate::{poseidon::PoseidonSponge, CryptographicSponge, FieldBasedCryptographicSponge};
-    use ark_ff::{field_new, BigInteger256, FftParameters, Fp256, Fp256Parameters, FpParameters};
-    use ark_test_curves::bls12_381::FrParameters;
-
-    pub struct TestFrParameters;
-
-    impl Fp256Parameters for TestFrParameters {}
-    impl FftParameters for TestFrParameters {
-        type BigInt = <FrParameters as FftParameters>::BigInt;
-        const TWO_ADICITY: u32 = FrParameters::TWO_ADICITY;
-        const TWO_ADIC_ROOT_OF_UNITY: Self::BigInt = FrParameters::TWO_ADIC_ROOT_OF_UNITY;
-    }
-
-    // This TestFrParameters is the same as the BLS12-381's Fr.
-    // MODULUS = 52435875175126190479447740508185965837690552500527637822603658699938581184513
-    impl FpParameters for TestFrParameters {
-        const MODULUS: BigInteger256 = FrParameters::MODULUS;
-        const MODULUS_BITS: u32 = FrParameters::MODULUS_BITS;
-        const CAPACITY: u32 = FrParameters::CAPACITY;
-        const REPR_SHAVE_BITS: u32 = FrParameters::REPR_SHAVE_BITS;
-        const R: BigInteger256 = FrParameters::R;
-        const R2: BigInteger256 = FrParameters::R2;
-        const INV: u64 = FrParameters::INV;
-        const GENERATOR: BigInteger256 = FrParameters::GENERATOR;
-        const MODULUS_MINUS_ONE_DIV_TWO: BigInteger256 = FrParameters::MODULUS_MINUS_ONE_DIV_TWO;
-        const T: BigInteger256 = FrParameters::T;
-        const T_MINUS_ONE_DIV_TWO: BigInteger256 = FrParameters::T_MINUS_ONE_DIV_TWO;
-    }
-
-    impl PoseidonDefaultParameters for TestFrParameters {
-        const PARAMS_OPT_FOR_CONSTRAINTS: [PoseidonDefaultParametersEntry; 7] = [
-            PoseidonDefaultParametersEntry::new(2, 17, 8, 31, 0),
-            PoseidonDefaultParametersEntry::new(3, 5, 8, 56, 0),
-            PoseidonDefaultParametersEntry::new(4, 5, 8, 56, 0),
-            PoseidonDefaultParametersEntry::new(5, 5, 8, 57, 0),
-            PoseidonDefaultParametersEntry::new(6, 5, 8, 57, 0),
-            PoseidonDefaultParametersEntry::new(7, 5, 8, 57, 0),
-            PoseidonDefaultParametersEntry::new(8, 5, 8, 57, 0),
-        ];
-        const PARAMS_OPT_FOR_WEIGHTS: [PoseidonDefaultParametersEntry; 7] = [
-            PoseidonDefaultParametersEntry::new(2, 257, 8, 13, 0),
-            PoseidonDefaultParametersEntry::new(3, 257, 8, 13, 0),
-            PoseidonDefaultParametersEntry::new(4, 257, 8, 13, 0),
-            PoseidonDefaultParametersEntry::new(5, 257, 8, 13, 0),
-            PoseidonDefaultParametersEntry::new(6, 257, 8, 13, 0),
-            PoseidonDefaultParametersEntry::new(7, 257, 8, 13, 0),
-            PoseidonDefaultParametersEntry::new(8, 257, 8, 13, 0),
-        ];
-    }
-
-    pub type TestFr = Fp256<TestFrParameters>;
+    use ark_ff::MontFp;
 
     #[test]
     fn test_poseidon_sponge_consistency() {
-        let sponge_param = TestFr::get_default_poseidon_parameters(2, false).unwrap();
+        let sponge_param = Fr::get_default_poseidon_parameters(2, false).unwrap();
 
-        let mut sponge = PoseidonSponge::<TestFr>::new(&sponge_param);
-        sponge.absorb(&vec![
-            TestFr::from(0u8),
-            TestFr::from(1u8),
-            TestFr::from(2u8),
-        ]);
+        let mut sponge = PoseidonSponge::<Fr>::new(&sponge_param);
+        sponge.absorb(&vec![Fr::from(0u8), Fr::from(1u8), Fr::from(2u8)]);
         let res = sponge.squeeze_native_field_elements(3);
         assert_eq!(
             res[0],
-            field_new!(
-                TestFr,
+            MontFp!(
+                Fr,
                 "40442793463571304028337753002242186710310163897048962278675457993207843616876"
             )
         );
         assert_eq!(
             res[1],
-            field_new!(
-                TestFr,
+            MontFp!(
+                Fr,
                 "2664374461699898000291153145224099287711224021716202960480903840045233645301"
             )
         );
         assert_eq!(
             res[2],
-            field_new!(
-                TestFr,
+            MontFp!(
+                Fr,
                 "50191078828066923662070228256530692951801504043422844038937334196346054068797"
             )
         );

@@ -10,7 +10,7 @@ keywords = [ "zero-knowledge", "cryptography", "zkSNARK", "SNARK", "sponge" ]
 categories = [ "cryptography" ]
 include = ["Cargo.toml", "src", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
 license = "MIT/Apache-2.0"
-edition = "2018"
+edition = "2021"
 
 [profile.release]
 opt-level = 3
@@ -19,24 +19,29 @@ incremental = true
 panic = 'abort'
 
 [dependencies]
-ark-ec = { version = "^0.3.0", default_features = false }
 ark-ff = { version = "^0.3.0", default_features = false }
+ark-ec = { version = "^0.3.0", default_features = false }
 ark-serialize = { version = "^0.3.0", default_features = false}
 ark-std = { version = "^0.3.0", default-features = false }
 derivative = { version = "2.1.1", features = [ "use_core" ] }
-digest = { version = "0.9.0", default_features = false }
+digest = { version = "0.10.3", default_features = false }
 rand_chacha = { version = "0.3.0", default-features = false }
 
 # Dependencies for r1cs
-ark-nonnative-field = { version = "^0.3.0", default-features = false, optional = true }
 ark-r1cs-std = { version = "^0.3.0", default-features = false, optional = true }
 ark-relations = { version = "^0.3.0", default-features = false, optional = true }
 tracing = { version = "0.1", default-features = false, features = [ "attributes" ], optional = true }
 
-[dev-dependencies]
-ark-test-curves = { version = "^0.3.0", features = ["bls12_381_curve", "mnt4_753_curve"]}
+# To be removed in the new release.
+[patch.crates-io]
+ark-std = { git = "https://github.com/arkworks-rs/std" }
+ark-ff = { git = "https://github.com/arkworks-rs/algebra" }
+ark-ec = { git = "https://github.com/arkworks-rs/algebra" }
+ark-serialize = { git = "https://github.com/arkworks-rs/algebra" }
+ark-r1cs-std = { git = "https://github.com/arkworks-rs/r1cs-std" }
+ark-relations =  { git = "https://github.com/arkworks-rs/snark"}
 
 [features]
 default = [ "r1cs", "std" ]
-r1cs = [ "ark-nonnative-field", "ark-relations", "ark-r1cs-std", "tracing" ]
-std = [ "ark-ec/std", "ark-ff/std", "ark-nonnative-field/std", "ark-r1cs-std/std", "ark-relations/std", "ark-std/std", "ark-serialize/std" ]
+r1cs = [ "ark-relations", "ark-r1cs-std", "tracing" ]
+std = [ "ark-ff/std", "ark-r1cs-std/std", "ark-relations/std", "ark-std/std", "ark-serialize/std" ]

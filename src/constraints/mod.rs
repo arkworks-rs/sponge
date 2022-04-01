@@ -1,11 +1,11 @@
 use crate::{Absorb, CryptographicSponge, FieldElementSize};
 use ark_ff::PrimeField;
-use ark_nonnative_field::params::{get_params, OptimizationType};
-use ark_nonnative_field::{AllocatedNonNativeFieldVar, NonNativeFieldVar};
 use ark_r1cs_std::alloc::AllocVar;
 use ark_r1cs_std::bits::boolean::Boolean;
 use ark_r1cs_std::bits::uint8::UInt8;
 use ark_r1cs_std::fields::fp::{AllocatedFp, FpVar};
+use ark_r1cs_std::fields::nonnative::params::{get_params, OptimizationType};
+use ark_r1cs_std::fields::nonnative::{AllocatedNonNativeFieldVar, NonNativeFieldVar};
 use ark_r1cs_std::R1CSVar;
 use ark_relations::lc;
 use ark_relations::r1cs::{ConstraintSystemRef, LinearCombination, SynthesisError};
@@ -42,8 +42,8 @@ pub fn bits_le_to_nonnative<'a, F: PrimeField, CF: PrimeField>(
     }
 
     let params = get_params(
-        F::size_in_bits(),
-        CF::size_in_bits(),
+        F::MODULUS_BIT_SIZE as usize,
+        CF::MODULUS_BIT_SIZE as usize,
         OptimizationType::Constraints,
     );
 

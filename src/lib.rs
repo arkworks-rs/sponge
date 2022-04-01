@@ -1,21 +1,15 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 //! A crate for the cryptographic sponge trait.
 #![deny(
-    const_err,
-    future_incompatible,
-    missing_docs,
-    non_shorthand_field_patterns,
-    renamed_and_removed_lints,
-    rust_2018_idioms,
-    stable_features,
-    trivial_casts,
-    trivial_numeric_casts,
     unused,
-    variant_size_differences
+    future_incompatible,
+    rust_2018_idioms,
+    rust_2021_compatibility,
+    nonstandard_style
 )]
 #![forbid(unsafe_code)]
 
-use ark_ff::{FpParameters, PrimeField};
+use ark_ff::PrimeField;
 use ark_std::vec;
 use ark_std::vec::Vec;
 
@@ -34,6 +28,9 @@ pub use absorb::*;
 /// [cos]: https://eprint.iacr.org/2019/1076
 pub mod poseidon;
 
+#[cfg(test)]
+mod test;
+
 /// An enum for specifying the output field element size.
 #[derive(Clone, Copy, Eq, PartialEq)]
 pub enum FieldElementSize {
@@ -47,11 +44,11 @@ pub enum FieldElementSize {
 impl FieldElementSize {
     pub(crate) fn num_bits<F: PrimeField>(&self) -> usize {
         if let FieldElementSize::Truncated(num_bits) = self {
-            if *num_bits > (F::Params::MODULUS_BITS as usize) {
+            if *num_bits > (F::MODULUS_BIT_SIZE as usize) {
                 panic!("num_bits is greater than the capacity of the field.")
             }
         };
-        F::Params::CAPACITY as usize
+        (F::MODULUS_BIT_SIZE - 1) as usize
     }
 
     /// Calculate the sum of field element sizes in `elements`.
@@ -106,11 +103,11 @@ pub(crate) fn squeeze_field_elements_with_sizes_default_impl<F: PrimeField>(
 /// A sponge can `absorb` or take in inputs and later `squeeze` or output bytes or field elements.
 /// The outputs are dependent on previous `absorb` and `squeeze` calls.
 pub trait CryptographicSponge: Clone {
-    /// Parameters used by the sponge.
-    type Parameters;
+    /// The configuration of the sponge.
+    type Config;
 
     /// Initialize a new instance of the sponge.
-    fn new(params: &Self::Parameters) -> Self;
+    fn new(params: &Self::Config) -> Self;
 
     /// Absorb an input into the sponge.
     fn absorb(&mut self, input: &impl Absorb);
@@ -192,7 +189,7 @@ pub trait SpongeExt: CryptographicSponge {
     /// The full state of the cryptographic sponge.
     type State: Clone;
     /// Returns a sponge that uses `state`.
-    fn from_state(state: Self::State, params: &Self::Parameters) -> Self;
+    fn from_state(state: Self::State, params: &Self::Config) -> Self;
     /// Consumes `self` and returns the state.
     fn into_state(self) -> Self::State;
 }

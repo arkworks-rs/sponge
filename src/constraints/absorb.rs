@@ -222,6 +222,7 @@ macro_rules! collect_sponge_field_elements_gadget {
 #[cfg(test)]
 mod tests {
     use crate::constraints::AbsorbGadget;
+    use crate::test::Fr;
     use crate::Absorb;
     use ark_r1cs_std::alloc::AllocVar;
     use ark_r1cs_std::fields::fp::FpVar;
@@ -230,7 +231,6 @@ mod tests {
     use ark_relations::r1cs::ConstraintSystem;
     use ark_relations::*;
     use ark_std::{test_rng, UniformRand};
-    use ark_test_curves::bls12_381::Fr;
 
     #[test]
     fn consistency_check() {

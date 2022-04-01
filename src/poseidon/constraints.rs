@@ -1,8 +1,8 @@
 use crate::constraints::AbsorbGadget;
 use crate::constraints::{CryptographicSpongeVar, SpongeWithGadget};
-use crate::poseidon::{PoseidonParameters, PoseidonSponge};
+use crate::poseidon::{PoseidonConfig, PoseidonSponge};
 use crate::DuplexSpongeMode;
-use ark_ff::{FpParameters, PrimeField};
+use ark_ff::PrimeField;
 use ark_r1cs_std::fields::fp::FpVar;
 use ark_r1cs_std::prelude::*;
 use ark_relations::r1cs::{ConstraintSystemRef, SynthesisError};
@@ -21,7 +21,7 @@ pub struct PoseidonSpongeVar<F: PrimeField> {
     pub cs: ConstraintSystemRef<F>,
 
     /// Sponge Parameters
-    pub parameters: PoseidonParameters<F>,
+    pub parameters: PoseidonConfig<F>,
 
     // Sponge State
     /// The sponge's state
@@ -180,10 +180,10 @@ impl<F: PrimeField> PoseidonSpongeVar<F> {
 }
 
 impl<F: PrimeField> CryptographicSpongeVar<F, PoseidonSponge<F>> for PoseidonSpongeVar<F> {
-    type Parameters = PoseidonParameters<F>;
+    type Parameters = PoseidonConfig<F>;
 
     #[tracing::instrument(target = "r1cs", skip(cs))]
-    fn new(cs: ConstraintSystemRef<F>, parameters: &PoseidonParameters<F>) -> Self {
+    fn new(cs: ConstraintSystemRef<F>, parameters: &PoseidonConfig<F>) -> Self {
         let zero = FpVar::<F>::zero();
         let state = vec![zero; parameters.rate + parameters.capacity];
         let mode = DuplexSpongeMode::Absorbing {
@@ -232,7 +232,7 @@ impl<F: PrimeField> CryptographicSpongeVar<F, PoseidonSponge<F>> for PoseidonSpo
 
     #[tracing::instrument(target = "r1cs", skip(self))]
     fn squeeze_bytes(&mut self, num_bytes: usize) -> Result<Vec<UInt8<F>>, SynthesisError> {
-        let usable_bytes = (F::Params::CAPACITY / 8) as usize;
+        let usable_bytes = ((F::MODULUS_BIT_SIZE - 1) / 8) as usize;
 
         let num_elements = (num_bytes + usable_bytes - 1) / usable_bytes;
         let src_elements = self.squeeze_field_elements(num_elements)?;
@@ -248,7 +248,7 @@ impl<F: PrimeField> CryptographicSpongeVar<F, PoseidonSponge<F>> for PoseidonSpo
 
     #[tracing::instrument(target = "r1cs", skip(self))]
     fn squeeze_bits(&mut self, num_bits: usize) -> Result<Vec<Boolean<F>>, SynthesisError> {
-        let usable_bits = F::Params::CAPACITY as usize;
+        let usable_bits = (F::MODULUS_BIT_SIZE - 1) as usize;
 
         let num_elements = (num_bits + usable_bits - 1) / usable_bits;
         let src_elements = self.squeeze_field_elements(num_elements)?;
@@ -296,6 +296,7 @@ mod tests {
     use crate::poseidon::constraints::PoseidonSpongeVar;
     use crate::poseidon::tests::poseidon_parameters_for_test;
     use crate::poseidon::PoseidonSponge;
+    use crate::test::Fr;
     use crate::{CryptographicSponge, FieldBasedCryptographicSponge};
     use ark_ff::UniformRand;
     use ark_r1cs_std::fields::fp::FpVar;
@@ -303,7 +304,6 @@ mod tests {
     use ark_relations::r1cs::ConstraintSystem;
     use ark_relations::*;
     use ark_std::test_rng;
-    use ark_test_curves::bls12_381::Fr;
 
     #[test]
     fn absorb_test() {
