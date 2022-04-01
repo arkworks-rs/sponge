@@ -1,9 +1,10 @@
-use crate::poseidon::{PoseidonParameters, PoseidonSponge};
+use crate::poseidon::{PoseidonConfig, PoseidonSponge};
+use crate::test::Fr;
 use crate::{absorb, collect_sponge_bytes, collect_sponge_field_elements};
 use crate::{Absorb, AbsorbWithLength, CryptographicSponge, FieldBasedCryptographicSponge};
 use ark_ff::{One, PrimeField, UniformRand};
 use ark_std::test_rng;
-use ark_test_curves::bls12_381::Fr;
+
 fn assert_different_encodings<F: PrimeField, A: Absorb>(a: &A, b: &A) {
     let bytes1 = a.to_sponge_bytes_as_vec();
     let bytes2 = b.to_sponge_bytes_as_vec();
@@ -116,7 +117,7 @@ fn test_macros() {
 }
 
 /// Generate default parameters (bls381-fr-only) for alpha = 17, state-size = 8
-pub(crate) fn poseidon_parameters_for_test<F: PrimeField>() -> PoseidonParameters<F> {
+pub(crate) fn poseidon_parameters_for_test<F: PrimeField>() -> PoseidonConfig<F> {
     let alpha = 17;
     let mds = vec![
         vec![
@@ -807,7 +808,7 @@ pub(crate) fn poseidon_parameters_for_test<F: PrimeField>() -> PoseidonParameter
     let partial_rounds = total_rounds - full_rounds;
     let capacity = 1;
     let rate = 2;
-    PoseidonParameters {
+    PoseidonConfig {
         full_rounds,
         partial_rounds,
         alpha,

@@ -191,8 +191,8 @@ impl PoseidonGrainLFSR {
 #[cfg(test)]
 mod test {
     use crate::poseidon::grain_lfsr::PoseidonGrainLFSR;
+    use crate::test::Fr;
     use ark_ff::MontFp;
-    use ark_test_curves::bls12_381::Fr;
 
     #[test]
     fn test_grain_lfsr_consistency() {
