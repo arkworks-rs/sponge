@@ -201,14 +201,12 @@ mod test {
         assert_eq!(
             lfsr.get_field_elements_rejection_sampling::<Fr>(1)[0],
             MontFp!(
-                Fr,
                 "27117311055620256798560880810000042840428971800021819916023577129547249660720"
             )
         );
         assert_eq!(
             lfsr.get_field_elements_rejection_sampling::<Fr>(1)[0],
             MontFp!(
-                Fr,
                 "51641662388546346858987925410984003801092143452466182801674685248597955169158"
             )
         );
