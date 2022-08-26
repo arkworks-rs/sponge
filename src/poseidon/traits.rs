@@ -293,9 +293,7 @@ mod test {
         let weights_rate_4 = Fr::get_default_poseidon_parameters(4, true).unwrap();
         assert_eq!(
             weights_rate_4.ark[0][0],
-            MontFp!(
-                "2997721997773001075802235431463112417440167809433966871891875582435098138600"
-            )
+            MontFp!("2997721997773001075802235431463112417440167809433966871891875582435098138600")
         );
         assert_eq!(
             weights_rate_4.mds[0][0],
@@ -321,9 +319,7 @@ mod test {
         let weights_rate_6 = Fr::get_default_poseidon_parameters(6, true).unwrap();
         assert_eq!(
             weights_rate_6.ark[0][0],
-            MontFp!(
-                "7417004907071346600696060525974582183666365156576759507353305331252133694222"
-            )
+            MontFp!("7417004907071346600696060525974582183666365156576759507353305331252133694222")
         );
         assert_eq!(
             weights_rate_6.mds[0][0],
