@@ -1,4 +1,7 @@
-use ark_ec::{ModelParameters, SWModelParameters, TEModelParameters};
+use ark_ec::{
+    short_weierstrass::SWCurveConfig as SWModelParameters,
+    twisted_edwards::TECurveConfig as TEModelParameters, CurveConfig as ModelParameters,
+};
 use ark_ff::{Field, PrimeField};
 use ark_r1cs_std::bits::boolean::Boolean;
 use ark_r1cs_std::bits::uint8::UInt8;

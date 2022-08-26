@@ -1,6 +1,9 @@
-use ark_ec::models::short_weierstrass_jacobian::GroupAffine as SWAffine;
-use ark_ec::models::twisted_edwards_extended::GroupAffine as TEAffine;
-use ark_ec::models::{SWModelParameters, TEModelParameters};
+use ark_ec::short_weierstrass::Affine as SWAffine;
+use ark_ec::twisted_edwards::Affine as TEAffine;
+use ark_ec::{
+    short_weierstrass::SWCurveConfig as SWModelParameters,
+    twisted_edwards::TECurveConfig as TEModelParameters,
+};
 use ark_ff::models::{Fp, FpConfig};
 use ark_ff::{PrimeField, ToConstraintField};
 use ark_serialize::CanonicalSerialize;
