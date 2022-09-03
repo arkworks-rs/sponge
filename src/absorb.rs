@@ -5,9 +5,10 @@ use ark_ec::{
     twisted_edwards::TECurveConfig as TEModelParameters,
 };
 use ark_ff::models::{Fp, FpConfig};
-use ark_ff::{PrimeField, ToConstraintField};
+use ark_ff::{BigInteger, PrimeField, ToConstraintField};
 use ark_serialize::CanonicalSerialize;
 use ark_std::vec::Vec;
+
 /// An interface for objects that can be absorbed by a `CryptographicSponge`.
 pub trait Absorb {
     /// Converts the object into a list of bytes that can be absorbed by a `CryptographicSponge`.
@@ -99,23 +100,10 @@ pub trait AbsorbWithLength: Absorb {
     }
 }
 
-/// If `F1` and `F2` have the same prime modulus, this method returns `Some(input)`
-/// but cast to `F2`, and returns `None` otherwise.
-pub(crate) fn field_cast<F1: PrimeField, F2: PrimeField>(input: F1) -> Option<F2> {
-    if F1::characteristic() != F2::characteristic() {
-        // Trying to absorb non-native field elements.
-        None
-    } else {
-        let mut buf = Vec::new();
-        input.serialize(&mut buf).unwrap();
-        Some(F2::from_le_bytes_mod_order(&buf))
-    }
-}
-
 /// If `F1` equals to `F2`, add all elements of `x` as `F2` to `dest` and returns `dest` pointer.
 ///
 /// This function will return None and no-op if `F1` is not equal to `F2`.
-pub(crate) fn batch_field_cast<'a, F1: PrimeField, F2: PrimeField>(
+pub(crate) fn field_cast<'a, F1: PrimeField, F2: PrimeField>(
     x: &[F1],
     dest: &'a mut Vec<F2>,
 ) -> Option<&'a mut Vec<F2>> {
@@ -124,9 +112,8 @@ pub(crate) fn batch_field_cast<'a, F1: PrimeField, F2: PrimeField>(
         None
     } else {
         x.iter().for_each(|item| {
-            let mut buf = Vec::new();
-            item.serialize(&mut buf).unwrap();
-            dest.push(F2::from_le_bytes_mod_order(&buf))
+            let bytes = item.into_bigint().to_bytes_le();
+            dest.push(F2::from_le_bytes_mod_order(&bytes))
         });
         Some(dest)
     }
@@ -164,16 +151,16 @@ impl Absorb for bool {
 
 impl<P: FpConfig<N>, const N: usize> Absorb for Fp<P, N> {
     fn to_sponge_bytes(&self, dest: &mut Vec<u8>) {
-        self.serialize(dest).unwrap()
+        self.serialize_compressed(dest).unwrap()
     }
     fn to_sponge_field_elements<F: PrimeField>(&self, dest: &mut Vec<F>) {
-        dest.push(field_cast(*self).unwrap())
+        let _ = field_cast(&[*self], dest);
     }
     fn batch_to_sponge_field_elements<F: PrimeField>(batch: &[Self], dest: &mut Vec<F>)
     where
         Self: Sized,
     {
-        batch_field_cast(batch, dest).unwrap();
+        field_cast(batch, dest).unwrap();
     }
 }
 
@@ -242,21 +229,27 @@ impl Absorb for isize {
 
 impl<CF: PrimeField, P: TEModelParameters<BaseField = CF>> Absorb for TEAffine<P> {
     fn to_sponge_bytes(&self, dest: &mut Vec<u8>) {
-        self.to_field_elements().unwrap().serialize(dest).unwrap()
+        self.to_field_elements()
+            .unwrap()
+            .serialize_compressed(dest)
+            .unwrap()
     }
 
     fn to_sponge_field_elements<F: PrimeField>(&self, dest: &mut Vec<F>) {
-        batch_field_cast::<P::BaseField, _>(&self.to_field_elements().unwrap(), dest).unwrap();
+        field_cast::<P::BaseField, _>(&self.to_field_elements().unwrap(), dest).unwrap();
     }
 }
 
 impl<CF: PrimeField, P: SWModelParameters<BaseField = CF>> Absorb for SWAffine<P> {
     fn to_sponge_bytes(&self, dest: &mut Vec<u8>) {
-        self.to_field_elements().unwrap().serialize(dest).unwrap()
+        self.to_field_elements()
+            .unwrap()
+            .serialize_compressed(dest)
+            .unwrap()
     }
 
     fn to_sponge_field_elements<F: PrimeField>(&self, dest: &mut Vec<F>) {
-        batch_field_cast::<P::BaseField, _>(&self.to_field_elements().unwrap(), dest).unwrap();
+        field_cast::<P::BaseField, _>(&self.to_field_elements().unwrap(), dest).unwrap();
     }
 }
 
@@ -362,19 +355,16 @@ macro_rules! collect_sponge_field_elements {
 
 #[cfg(test)]
 mod tests {
+    use crate::field_cast;
     use crate::test::Fr;
-    use crate::{batch_field_cast, field_cast};
     use ark_std::{test_rng, vec::Vec, UniformRand};
 
     #[test]
     fn test_cast() {
         let mut rng = test_rng();
-        let expected = Fr::rand(&mut rng);
-        let actual = field_cast::<_, Fr>(expected).unwrap();
-        assert_eq!(actual, expected);
         let expected: Vec<_> = (0..10).map(|_| Fr::rand(&mut rng)).collect();
         let mut actual = Vec::new();
-        batch_field_cast::<_, Fr>(&expected, &mut actual).unwrap();
+        field_cast::<_, Fr>(&expected, &mut actual).unwrap();
         assert_eq!(actual, expected);
     }
 }
