@@ -1,6 +1,6 @@
 [package]
 name = "ark-sponge"
-version = "0.3.0"
+version = "0.4.0-alpha"
 authors = [ "arkworks contributors" ]
 description = "An implementation of the cryptographic sponge functions for zkSNARK"
 homepage = "https://arkworks.rs"
@@ -19,27 +19,18 @@ incremental = true
 panic = 'abort'
 
 [dependencies]
-ark-ff = { version = "^0.3.0", default_features = false }
-ark-ec = { version = "^0.3.0", default_features = false }
-ark-serialize = { version = "^0.3.0", default_features = false}
-ark-std = { version = "^0.3.0", default-features = false }
+ark-ff = { version = "0.4.0-alpha", default_features = false }
+ark-ec = { version = "0.4.0-alpha", default_features = false }
+ark-serialize = { version = "0.4.0-alpha", default_features = false}
+ark-std = { version = "0.4.0-alpha", default-features = false }
 derivative = { version = "2.1.1", features = [ "use_core" ] }
 digest = { version = "0.10.3", default_features = false }
 rand_chacha = { version = "0.3.0", default-features = false }
 
 # Dependencies for r1cs
-ark-r1cs-std = { version = "^0.3.0", default-features = false, optional = true }
-ark-relations = { version = "^0.3.0", default-features = false, optional = true }
+ark-r1cs-std = { version = "0.4.0-alpha", default-features = false, optional = true }
+ark-relations = { version = "0.4.0-alpha", default-features = false, optional = true }
 tracing = { version = "0.1", default-features = false, features = [ "attributes" ], optional = true }
-
-# To be removed in the new release.
-[patch.crates-io]
-ark-std = { git = "https://github.com/arkworks-rs/std" }
-ark-ff = { git = "https://github.com/arkworks-rs/algebra" }
-ark-ec = { git = "https://github.com/arkworks-rs/algebra" }
-ark-serialize = { git = "https://github.com/arkworks-rs/algebra" }
-ark-r1cs-std = { git = "https://github.com/arkworks-rs/r1cs-std" }
-ark-relations =  { git = "https://github.com/arkworks-rs/snark"}
 
 [features]
 default = [ "r1cs", "std" ]
