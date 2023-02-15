@@ -8,7 +8,7 @@
 </p>
 
 `ark-sponge` is a Rust library that provides infrastructure for implementing *cryptographic sponges*. This library is released under the MIT License and the Apache v2 License (see [License](#license)).
-
+**This code has been archived, and has moved to the [crypto-primitives](https://www.github.com/arkworks-rs/crypto-primitives) library.
 **WARNING:** This is an academic prototype, and in particular has not received careful code review.
 This implementation is NOT ready for production use.
 
